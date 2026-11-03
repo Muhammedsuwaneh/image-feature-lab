@@ -3,6 +3,23 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+imagefeatureenv/
+env/
+build/
+dist/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+
 # User-specific files
 *.rsuser
 *.suo

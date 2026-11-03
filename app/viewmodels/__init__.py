@@ -1,0 +1,1 @@
+"""Qt-facing state and commands exposed to QML."""
