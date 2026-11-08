@@ -14,7 +14,7 @@ Item {
         id: imagePicker
         title: "Select an image"
         fileMode: FileDialog.OpenFile
-        nameFilters: ["Image files (*.png *.jpg *.jpeg *.bmp *.tif *.tiff)", "All files (*)"]
+        nameFilters: ["Image files (*.png *.jpg *.jpeg)"]
         onAccepted: page.viewModel.setSelectedImage(selectedFile.toString())
     }
 
@@ -35,7 +35,7 @@ Item {
                 theme: page.theme
                 eyebrow: "INPUT / IMAGE INSPECTION"
                 title: "Inspect an image before analysis."
-                description: "Choose a local image to preview it. Feature extraction and image metadata are not connected yet."
+                description: "Choose a local image to compare its original appearance with the Digits-compatible 8 x 8 representation."
             }
 
             RowLayout {
@@ -84,62 +84,88 @@ Item {
                             }
                         }
 
-                        Rectangle {
+                        RowLayout {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                            color: "#F0F3EF"
-                            radius: 4
-                            clip: true
+                            spacing: 10
 
-                            Image {
-                                id: imagePreview
-                                anchors.fill: parent
-                                anchors.margins: 12
-                                source: page.viewModel.selectedImageUrl
-                                fillMode: Image.PreserveAspectFit
-                                asynchronous: true
-                                visible: page.viewModel.hasSelectedImage && status === Image.Ready
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                spacing: 7
+                                Text {
+                                    text: "ORIGINAL"
+                                    color: page.theme.muted
+                                    font.family: "Bahnschrift"
+                                    font.pixelSize: 8
+                                    font.weight: Font.Bold
+                                }
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    color: "#F0F3EF"
+                                    radius: 4
+                                    clip: true
+                                    Image {
+                                        id: originalImagePreview
+                                        anchors.fill: parent
+                                        anchors.margins: 10
+                                        source: page.viewModel.selectedImageUrl
+                                        fillMode: Image.PreserveAspectFit
+                                        asynchronous: true
+                                        visible: page.viewModel.hasSelectedImage && status === Image.Ready
+                                    }
+                                    Text {
+                                        anchors.centerIn: parent
+                                        width: parent.width - 24
+                                        text: page.viewModel.processingError || "Select a PNG or JPEG image to begin."
+                                        color: page.viewModel.processingError ? page.theme.accent : page.theme.muted
+                                        font.family: "Segoe UI"
+                                        font.pixelSize: 11
+                                        horizontalAlignment: Text.AlignHCenter
+                                        wrapMode: Text.WordWrap
+                                        visible: !page.viewModel.hasSelectedImage || originalImagePreview.status === Image.Error
+                                    }
+                                }
                             }
 
                             ColumnLayout {
-                                anchors.centerIn: parent
-                                width: Math.min(parent.width - 40, 390)
-                                spacing: 8
-                                visible: !page.viewModel.hasSelectedImage || imagePreview.status === Image.Error
-
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                spacing: 7
+                                Text {
+                                    text: "8 x 8 / SCALED TO 0-16"
+                                    color: page.theme.muted
+                                    font.family: "Bahnschrift"
+                                    font.pixelSize: 8
+                                    font.weight: Font.Bold
+                                }
                                 Rectangle {
-                                    Layout.alignment: Qt.AlignHCenter
-                                    Layout.preferredWidth: 46
-                                    Layout.preferredHeight: 46
-                                    radius: 6
-                                    color: page.theme.paleGreen
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    color: "#F0F3EF"
+                                    radius: 4
+                                    clip: true
+                                    Image {
+                                        id: processedImagePreview
+                                        anchors.fill: parent
+                                        anchors.margins: 10
+                                        source: page.viewModel.processedImageUrl
+                                        fillMode: Image.PreserveAspectFit
+                                        smooth: false
+                                        visible: page.viewModel.hasProcessedImage && status === Image.Ready
+                                    }
                                     Text {
                                         anchors.centerIn: parent
-                                        text: imagePreview.status === Image.Error ? "!" : "IMG"
-                                        color: page.theme.green
-                                        font.family: "Bahnschrift"
+                                        width: parent.width - 24
+                                        text: page.viewModel.processingError || "The processed 8 x 8 image will appear here."
+                                        color: page.viewModel.processingError ? page.theme.accent : page.theme.muted
+                                        font.family: "Segoe UI"
                                         font.pixelSize: 11
-                                        font.weight: Font.Bold
+                                        horizontalAlignment: Text.AlignHCenter
+                                        wrapMode: Text.WordWrap
+                                        visible: !page.viewModel.hasProcessedImage || processedImagePreview.status === Image.Error
                                     }
-                                }
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: imagePreview.status === Image.Error ? "This image could not be previewed." : "No image selected"
-                                    color: page.theme.ink
-                                    font.family: "Bahnschrift"
-                                    font.pixelSize: 15
-                                    font.weight: Font.DemiBold
-                                    horizontalAlignment: Text.AlignHCenter
-                                    wrapMode: Text.WordWrap
-                                }
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: imagePreview.status === Image.Error ? "Choose a supported local image file to try again." : "Select a local image to display it here."
-                                    color: page.theme.muted
-                                    font.family: "Segoe UI"
-                                    font.pixelSize: 11
-                                    horizontalAlignment: Text.AlignHCenter
-                                    wrapMode: Text.WordWrap
                                 }
                             }
                         }
@@ -168,7 +194,9 @@ Item {
 
                         Text {
                             Layout.fillWidth: true
-                            text: page.viewModel.hasSelectedImage ? "Image selected" : "Waiting for input"
+                                text: page.viewModel.processingError
+                                    ? "Image could not be processed"
+                                    : page.viewModel.hasProcessedImage ? "Image processed" : "Waiting for input"
                             color: page.theme.ink
                             font.family: "Bahnschrift"
                             font.pixelSize: 18
@@ -197,8 +225,8 @@ Item {
                             spacing: 5
                             Text { text: "IMAGE DIMENSIONS"; color: page.theme.muted; font.family: "Bahnschrift"; font.pixelSize: 8; font.weight: Font.Bold }
                             Text {
-                                text: imagePreview.status === Image.Ready
-                                      ? imagePreview.sourceSize.width + " x " + imagePreview.sourceSize.height + " px"
+                                  text: page.viewModel.hasProcessedImage
+                                      ? page.viewModel.originalImageWidth + " x " + page.viewModel.originalImageHeight + " px"
                                       : "Not available"
                                 color: page.theme.ink
                                 font.family: "Segoe UI"
@@ -216,8 +244,12 @@ Item {
                             Layout.fillWidth: true
                             theme: page.theme
                             marker: "FX"
-                            title: "Feature extraction is not connected"
-                            detail: "Pixel statistics and feature descriptors will appear after the image-processing backend is implemented."
+                                title: page.viewModel.hasProcessedImage
+                                   ? page.viewModel.featureVectorLength + "-dimensional feature vector"
+                                   : "No feature vector"
+                                detail: page.viewModel.hasProcessedImage
+                                    ? "Grayscale intensities are scaled to the Digits range of 0-16."
+                                    : "A vector is produced after a supported image is selected."
                         }
 
                         Item { Layout.fillHeight: true }

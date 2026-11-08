@@ -42,8 +42,10 @@ Item {
                     Layout.preferredHeight: 112
                     theme: page.theme
                     label: "DATASET"
-                    value: "Not loaded"
-                    detail: "No image collection is active"
+                        value: page.viewModel.hasDigitsDataset ? "Digits baseline" : "Unavailable"
+                        detail: page.viewModel.hasDigitsDataset
+                            ? page.viewModel.datasetSampleCount + " images / " + page.viewModel.datasetClassCount + " classes"
+                            : page.viewModel.datasetError
                     marker: page.theme.accent
                 }
                 MetricTile {
@@ -51,8 +53,10 @@ Item {
                     Layout.preferredHeight: 112
                     theme: page.theme
                     label: "FEATURE SPACE"
-                    value: "Not computed"
-                    detail: "Image descriptors are not available yet"
+                          value: page.viewModel.hasDigitsDataset
+                              ? page.viewModel.datasetFeatureCount + " dimensions"
+                              : "Not available"
+                          detail: "8 x 8 grayscale pixels / intensities 0-16"
                     marker: page.theme.green
                 }
                 MetricTile {
@@ -60,8 +64,12 @@ Item {
                     Layout.preferredHeight: 112
                     theme: page.theme
                     label: "CLASSIFICATION"
-                    value: "Not evaluated"
-                    detail: "No nearest-neighbor experiment has run"
+                    value: page.viewModel.hasDigitsDataset
+                        ? (page.viewModel.knnTestAccuracy * 100).toFixed(2) + "%"
+                        : "Not evaluated"
+                    detail: page.viewModel.hasDigitsDataset
+                        ? "k = " + page.viewModel.knnK + " / Euclidean distance"
+                        : "No nearest-neighbor experiment has run"
                     marker: "#879A8D"
                 }
             }
@@ -146,7 +154,7 @@ Item {
                         }
                         Repeater {
                             model: [
-                                { step: "01", name: "Load image data", state: "PENDING" },
+                                { step: "01", name: "Load Digits baseline", state: page.viewModel.hasDigitsDataset ? "READY" : "UNAVAILABLE" },
                                 { step: "02", name: "Extract feature vectors", state: "PENDING" },
                                 { step: "03", name: "Compare distances", state: "PENDING" },
                                 { step: "04", name: "Evaluate neighbors", state: "PENDING" }
@@ -183,7 +191,9 @@ Item {
                         Item { Layout.fillHeight: true }
                         Text {
                             Layout.fillWidth: true
-                            text: "No dataset or experimental measurements are currently loaded."
+                                text: page.viewModel.hasDigitsDataset
+                                    ? page.viewModel.datasetTrainCount + " training / " + page.viewModel.datasetTestCount + " test samples. No experiments have run."
+                                    : page.viewModel.datasetError
                             color: page.theme.muted
                             font.family: "Segoe UI"
                             font.pixelSize: 10

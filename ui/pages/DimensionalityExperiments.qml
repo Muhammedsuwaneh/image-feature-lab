@@ -68,23 +68,25 @@ Item {
                             columnSpacing: 18
                             rowSpacing: 14
 
-                            Text { text: "Feature dimensions"; color: page.theme.ink; font.family: "Segoe UI"; font.pixelSize: 11 }
+                            Text { text: "Feature dimensions (fixed)"; color: page.theme.ink; font.family: "Segoe UI"; font.pixelSize: 11 }
                             TextField {
                                 Layout.fillWidth: true
-                                placeholderText: "e.g. 8, 16, 32"
+                                text: "64, 96, 160, 256"
+                                color: "#000000"
+                                readOnly: true
                                 selectByMouse: true
                                 background: Rectangle { radius: 4; color: "#F8F9F6"; border.color: page.theme.line }
                             }
                             Text { text: "Distance metric"; color: page.theme.ink; font.family: "Segoe UI"; font.pixelSize: 11 }
                             ComboBox {
                                 Layout.fillWidth: true
-                                model: ["Choose after feature pipeline is available"]
+                                model: ["Euclidean (fixed)"]
                                 enabled: false
                             }
                             Text { text: "Classifier"; color: page.theme.ink; font.family: "Segoe UI"; font.pixelSize: 11 }
                             ComboBox {
                                 Layout.fillWidth: true
-                                model: ["Choose after evaluation service is available"]
+                                model: ["k-NN, k = 5 (fixed)"]
                                 enabled: false
                             }
                         }
@@ -101,7 +103,7 @@ Item {
                             }
                             Text {
                                 Layout.fillWidth: true
-                                text: "Experiment execution is not connected yet. No results will be generated from this form."
+                                text: "Run experiment uses these fixed conditions; changing parameters is not available yet."
                                 color: page.theme.muted
                                 font.family: "Segoe UI"
                                 font.pixelSize: 10
@@ -112,7 +114,8 @@ Item {
                             id: runExperimentButton
                             Layout.alignment: Qt.AlignRight
                             text: "Run experiment"
-                            enabled: false
+                            enabled: page.viewModel && page.viewModel.hasDigitsDataset
+                            onClicked: page.viewModel.runDimensionalityExperiments()
                             contentItem: Text {
                                 text: runExperimentButton.text
                                 color: "#FFFFFF"
@@ -122,7 +125,7 @@ Item {
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
                             }
-                            background: Rectangle { radius: 4; color: "#A8B3AC" }
+                            background: Rectangle { radius: 4; color: runExperimentButton.enabled ? page.theme.accent : "#A8B3AC" }
                         }
                     }
                 }
@@ -156,13 +159,45 @@ Item {
                         Text {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                            text: "Keep the dataset, feature construction, distance definition, and evaluation protocol fixed while varying dimensionality. The experiment backend will enforce and record this protocol in a later phase."
+                            text: "Keep the dataset, feature construction, distance definition, and evaluation protocol fixed while varying dimensionality. The run action uses the reproducible defaults shown here."
                             color: page.theme.muted
                             font.family: "Segoe UI"
                             font.pixelSize: 11
                             wrapMode: Text.WordWrap
                             verticalAlignment: Text.AlignTop
                         }
+                    }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 260
+                radius: 6
+                color: page.theme.surface
+                border.color: page.theme.line
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 20
+                    spacing: 12
+                    Text {
+                        text: "EXPERIMENT SUMMARY"
+                        color: page.theme.green
+                        font.family: "Bahnschrift"
+                        font.pixelSize: 9
+                        font.weight: Font.Bold
+                    }
+                    Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: page.theme.line }
+                    TextArea {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        text: page.viewModel ? page.viewModel.dimensionalityExperimentSummary : "No experiment output yet."
+                        color: page.theme.ink
+                        font.family: "Consolas"
+                        font.pixelSize: 10
+                        wrapMode: TextEdit.WordWrap
+                        readOnly: true
+                        background: Rectangle { color: "#F7F9F7"; border.color: page.theme.line; radius: 5 }
                     }
                 }
             }

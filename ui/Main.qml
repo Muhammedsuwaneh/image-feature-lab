@@ -88,7 +88,7 @@ ApplicationWindow {
                     Item { Layout.fillWidth: true }
 
                     Rectangle {
-                        Layout.preferredWidth: 154
+                        Layout.preferredWidth: 218
                         Layout.preferredHeight: 32
                         radius: 4
                         color: theme.canvas
@@ -104,7 +104,9 @@ ApplicationWindow {
                                 color: theme.accent
                             }
                             Text {
-                                text: "NO ACTIVE DATASET"
+                                  text: mainWindow.viewModel.hasDigitsDataset
+                                      ? "DIGITS BASELINE / " + mainWindow.viewModel.datasetSampleCount + " SAMPLES"
+                                      : "DIGITS DATASET UNAVAILABLE"
                                 color: theme.muted
                                 font.family: "Bahnschrift"
                                 font.pixelSize: 9

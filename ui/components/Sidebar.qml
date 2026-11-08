@@ -140,7 +140,7 @@ Rectangle {
         }
 
         Text {
-            text: "ESTU  /  BIL537"
+            text: "FEATURELAB | 2026"
             color: "#D3DDD6"
             font.family: "Bahnschrift"
             font.pixelSize: 10
@@ -148,7 +148,7 @@ Rectangle {
         }
         Text {
             Layout.topMargin: 4
-            text: "Distance concentration study"
+            text: "Distance concentration"
             color: sidebar.theme.railMuted
             font.family: "Segoe UI"
             font.pixelSize: 10
