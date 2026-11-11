@@ -105,9 +105,7 @@ def evaluate_knn_classifier(dataset: DigitsDataset, *, k: int = 5) -> dict[str, 
     }
 
 
-def predict_knn_for_feature_vector(
-    feature_vector: np.ndarray | list[float], dataset: DigitsDataset, *, k: int = 5
-) -> dict[str, Any]:
+def predict_knn_for_feature_vector(feature_vector: np.ndarray | list[float], dataset: DigitsDataset, *, k: int = 5) -> dict[str, Any]:
     """Predict the label for a single 64-dimensional feature vector and retrieve its nearest neighbors."""
     vector = np.asarray(feature_vector, dtype=np.float64).ravel()
     if vector.size != dataset.feature_vectors.shape[1]:
