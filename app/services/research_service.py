@@ -3,18 +3,18 @@
 import numpy as np
 
 from app.backend.calculations.distance_metrics import analyze_distance_to_samples, coefficient_of_variation, relative_distance_contrast
-from app.backend.datasets.digits_dataset import DigitsDataset
+from app.backend.datasets.mnist_dataset import MNISTDataset
 
 
-def run_experiment_suite(dataset: DigitsDataset) -> dict:
+def run_experiment_suite(dataset: MNISTDataset, *, cancel_requested=None) -> dict:
     from app.backend.experiments.dimensionality_experiments import run_all_dimensionality_experiments
     from app.backend.experiments.result_visualizations import build_result_visualizations
 
-    results = run_all_dimensionality_experiments(dataset=dataset)
+    results = run_all_dimensionality_experiments(dataset=dataset, cancel_requested=cancel_requested)
     return {"results": results, "visualizations": build_result_visualizations(results)}
 
 
-def analyze_distance_query(dataset: DigitsDataset, test_position: int) -> dict:
+def analyze_distance_query(dataset: MNISTDataset, test_position: int) -> dict:
     from app.backend.experiments.result_visualizations import render_distance_distribution_chart
 
     if test_position < 0 or test_position >= len(dataset.test_indices):

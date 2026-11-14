@@ -18,7 +18,9 @@ def positive_integer(value: int, name: str) -> int:
 
 
 def feature_matrix(values, name: str, *, allow_empty: bool = False) -> np.ndarray:
-    matrix = np.asarray(values, dtype=np.float64)
+    source = np.asarray(values)
+    dtype = np.float32 if source.dtype == np.float32 else np.float64
+    matrix = np.asarray(source, dtype=dtype)
     if matrix.ndim != 2 or matrix.shape[1] == 0:
         raise ValueError(f"{name} must be a 2D array with at least one feature.")
     if not allow_empty and matrix.shape[0] == 0:

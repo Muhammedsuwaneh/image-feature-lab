@@ -39,7 +39,7 @@ Item {
                     text: page.viewModel.experimentsRunning ? "Running experiments and rendering charts..."
                         : page.viewModel.experimentError ? "Experiment failed: " + page.viewModel.experimentError
                         : page.viewModel.dimensionalityCharts.length > 0
-                        ? "Results reflect the latest completed experiment run."
+                        ? "MNIST results: stratified subset of 5,000 training and 1,000 test images; seed 42."
                         : "Run the experiment suite to generate measured results."
                     color: page.theme.muted
                     font.family: "Segoe UI"
@@ -51,7 +51,7 @@ Item {
                     objectName: "runExperimentsButton"
                     text: page.viewModel.datasetLoading ? "Loading dataset..."
                         : page.viewModel.experimentsRunning ? "Running..."
-                        : page.viewModel.hasDigitsDataset ? "Run experiments" : "Load dataset and run"
+                        : page.viewModel.hasMNISTDataset ? "Run experiments" : "Load dataset and run"
                     enabled: !page.viewModel.datasetLoading && !page.viewModel.experimentsRunning
                     onClicked: page.viewModel.runDimensionalityExperiments()
                     contentItem: Text {

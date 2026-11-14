@@ -27,3 +27,15 @@ def wait_until(qt_app):
         qt_app.processEvents()
         assert predicate(), "Timed out waiting for Qt operation"
     return wait
+
+
+@pytest.fixture(scope="session")
+def mnist_data():
+    from app.backend.datasets.mnist_dataset import load_mnist_dataset
+    return load_mnist_dataset()
+
+
+@pytest.fixture(scope="session")
+def small_mnist(mnist_data):
+    from app.backend.datasets.mnist_dataset import experiment_subset
+    return experiment_subset(mnist_data, train_limit=600, test_limit=100)

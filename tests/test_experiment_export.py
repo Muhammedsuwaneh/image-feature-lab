@@ -21,13 +21,13 @@ def test_command_line_experiments_export_with_legacy_console_encoding(tmp_path):
     directory = tmp_path / "results-\u0130"
     environment = dict(os.environ, PYTHONIOENCODING="cp1252")
     result = subprocess.run(
-        [sys.executable, str(project / "run_experiments.py"), "--output", str(directory)],
-        cwd=tmp_path, env=environment, capture_output=True, text=True, timeout=60,
+        [sys.executable, str(project / "run_experiments.py"), "--output", str(directory), "--train-samples", "600", "--test-samples", "100"],
+        cwd=tmp_path, env=environment, capture_output=True, text=True, timeout=120,
     )
     assert result.returncode == 0, result.stdout + result.stderr
     record = json.loads((directory / "results.json").read_text(encoding="utf-8"))
     assert set(record["synthetic"]) == {"2", "4", "8", "16", "32", "64", "128", "256"}
-    assert set(record["irrelevant_features"]) == {"64", "96", "160", "256"}
+    assert set(record["irrelevant_features"]) == {"784", "1024", "1568", "2352"}
     assert record["metadata"]["noise_seeds"] == [0, 1, 2]
     assert len(record["standardization_and_pca"]) == 4
     assert len(list(directory.glob("*.png"))) == 6

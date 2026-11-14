@@ -35,7 +35,7 @@ Item {
                 theme: page.theme
                 eyebrow: "INPUT / IMAGE INSPECTION"
                 title: "Inspect an image before analysis."
-                description: "Choose a local image to compare its original appearance with the Digits-compatible 8 x 8 representation."
+                description: "Choose a local image to compare its original appearance with the MNIST-compatible 28 x 28 representation."
             }
 
             RowLayout {
@@ -135,7 +135,7 @@ Item {
                                 Layout.fillHeight: true
                                 spacing: 7
                                 Text {
-                                    text: "8 x 8 / SCALED TO 0-16"
+                                    text: "28 x 28 / NORMALIZED TO 0-1"
                                     color: page.theme.muted
                                     font.family: "Bahnschrift"
                                     font.pixelSize: 8
@@ -160,7 +160,7 @@ Item {
                                     Text {
                                         anchors.centerIn: parent
                                         width: parent.width - 24
-                                        text: page.viewModel.processingError || "The processed 8 x 8 image will appear here."
+                                        text: page.viewModel.processingError || "The processed 28 x 28 image will appear here."
                                         color: page.viewModel.processingError ? page.theme.accent : page.theme.muted
                                         font.family: "Segoe UI"
                                         font.pixelSize: 11
@@ -302,7 +302,7 @@ Item {
                         Layout.fillWidth: true
                         text: page.viewModel.knnPredictionError ? page.viewModel.knnPredictionError
                             : page.viewModel.datasetLoading ? "Loading the reference dataset..."
-                            : !page.viewModel.hasDigitsDataset ? "Reference dataset unavailable: " + page.viewModel.datasetError
+                            : !page.viewModel.hasMNISTDataset ? "Reference dataset unavailable: " + page.viewModel.datasetError
                             : page.viewModel.hasKnnPrediction ? "Predicted digit: " + page.viewModel.knnPredictedLabel
                             : "Choose an image to compare with the training samples."
                         color: page.theme.ink
@@ -315,7 +315,7 @@ Item {
                             : page.viewModel.knnEvaluationError ? "Baseline evaluation failed: " + page.viewModel.knnEvaluationError
                             : page.viewModel.hasKnnEvaluation
                             ? "Held-out baseline accuracy: " + (page.viewModel.knnTestAccuracy * 100).toFixed(2) + "% | Uploads are normalized for stroke polarity, margins and placement. This is a research classifier."
-                            : "The reference images contain 8 x 8 grayscale digit samples."
+                            : "The reference images contain 28 x 28 grayscale digit samples."
                         color: page.theme.muted
                         font.pixelSize: 11
                         wrapMode: Text.WordWrap
@@ -357,7 +357,7 @@ Item {
                     TextArea {
                         Layout.fillWidth: true
                         visible: page.viewModel.hasProcessedImage
-                        text: "64 image features: [" + page.viewModel.featureVector.join(", ") + "]"
+                        text: "784 image features: [" + page.viewModel.featureVector.join(", ") + "]"
                         readOnly: true
                         wrapMode: TextEdit.WordWrap
                         color: page.theme.ink

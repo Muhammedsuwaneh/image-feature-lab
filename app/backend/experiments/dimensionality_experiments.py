@@ -8,7 +8,7 @@ from sklearn.preprocessing import StandardScaler
 
 from app.backend.calculations.distance_metrics import coefficient_of_variation, relative_distance_contrast, validate_squared_distance_theory
 from app.backend.calculations.pairwise import distance_batches
-from app.backend.datasets.digits_dataset import DigitsDataset, load_digits_dataset
+from app.backend.datasets.mnist_dataset import MNISTDataset, load_mnist_dataset, experiment_subset
 from app.backend.machine_learning.knn_classifier import KNNModel
 from app.backend.validation import feature_matrix, positive_integer
 
@@ -24,7 +24,7 @@ def _summarize_distance_distribution(distances: np.ndarray) -> dict[str, Any]:
     }
 
 
-def _evaluate_distance_knn(train_features, train_labels, test_features, test_labels, *, k: int = 5) -> dict[str, Any]:
+def _evaluate_distance_knn(train_features, train_labels, test_features, test_labels, *, k: int = 5, cancel_requested=None) -> dict[str, Any]:
     """Measure every test-to-training distance once, without a full distance cube.
 
     Mean/std/CV describe pooled distances to ALL training references.
@@ -38,6 +38,8 @@ def _evaluate_distance_knn(train_features, train_labels, test_features, test_lab
     nearest, farthest, query_cvs, contrasts, neighbor_indices = [], [], [], [], []
     count, mean, m2 = 0, 0.0, 0.0
     for _, distances in distance_batches(model.train_features, queries):
+        if cancel_requested is not None and cancel_requested():
+            raise InterruptedError("MNIST experiments cancelled.")
         batch_count = distances.size
         batch_mean = float(np.mean(distances))
         delta = batch_mean - mean
@@ -49,7 +51,7 @@ def _evaluate_distance_knn(train_features, train_labels, test_features, test_lab
         farthest.extend(distances.max(axis=1))
         query_cvs.extend(coefficient_of_variation(row) for row in distances)
         contrasts.extend(relative_distance_contrast(row) for row in distances)
-        neighbor_indices.append(np.argsort(distances, axis=1, kind="stable")[:, :model.k])
+        neighbor_indices.append(model.neighbor_indices(distances, model.k))
     predictions = model.predict_from_neighbors(np.concatenate(neighbor_indices))
     nearest, farthest = np.asarray(nearest), np.asarray(farthest)
     variance = max(0.0, m2 / count)
@@ -84,15 +86,15 @@ def _build_augmented_features(data: np.ndarray, *, target_dimension: int, seed: 
     if target_dimension < data.shape[1]:
         raise ValueError("target_dimension must preserve all original features.")
     rng = np.random.default_rng(seed)
-    noise = rng.uniform(0.0, 16.0, size=(len(data), target_dimension - data.shape[1]))
+    noise = rng.uniform(0.0, 1.0, size=(len(data), target_dimension - data.shape[1]))
     return np.concatenate([data, noise], axis=1)
 
 
-def run_irrelevant_feature_experiment(*, dataset=None, feature_sizes=(64, 96, 160, 256), seeds=(0, 1, 2), k=5):
-    """Append Uniform[0,16] features and retain every seed's measurements."""
+def run_irrelevant_feature_experiment(*, dataset=None, feature_sizes=(784, 1024, 1568, 2352), seeds=(0, 1, 2), k=5, cancel_requested=None):
+    """Append Uniform[0,1] features and retain every seed's measurements."""
     if not feature_sizes or not seeds:
         raise ValueError("At least one feature size and one seed are required.")
-    dataset = load_digits_dataset() if dataset is None else dataset
+    dataset = experiment_subset(load_mnist_dataset()) if dataset is None else dataset
     results = {}
     for feature_size in feature_sizes:
         condition_metrics = []
@@ -100,7 +102,7 @@ def run_irrelevant_feature_experiment(*, dataset=None, feature_sizes=(64, 96, 16
             augmented = _build_augmented_features(dataset.feature_vectors, target_dimension=feature_size, seed=seed)
             summary = _evaluate_distance_knn(
                 augmented[dataset.train_indices], dataset.labels[dataset.train_indices],
-                augmented[dataset.test_indices], dataset.labels[dataset.test_indices], k=k,
+                augmented[dataset.test_indices], dataset.labels[dataset.test_indices], k=k, cancel_requested=cancel_requested,
             )
             summary["seed"] = int(seed)
             condition_metrics.append(summary)
@@ -117,15 +119,15 @@ def run_irrelevant_feature_experiment(*, dataset=None, feature_sizes=(64, 96, 16
     return results
 
 
-def run_standardization_pca_experiment(*, dataset=None, random_state=42, k=5):
+def run_standardization_pca_experiment(*, dataset=None, random_state=42, k=5, cancel_requested=None):
     """Fit each transformer ONCE on training data and reuse it for held-out data."""
-    dataset = load_digits_dataset() if dataset is None else dataset
+    dataset = experiment_subset(load_mnist_dataset()) if dataset is None else dataset
     x_train, x_test = dataset.feature_vectors[dataset.train_indices], dataset.feature_vectors[dataset.test_indices]
     y_train, y_test = dataset.labels[dataset.train_indices], dataset.labels[dataset.test_indices]
     transformers = {
-        "original_64": None, "standardized": StandardScaler(),
-        "pca_16": PCA(n_components=16, svd_solver="full", random_state=random_state),
-        "pca_32": PCA(n_components=32, svd_solver="full", random_state=random_state),
+        "original": None, "standardized": StandardScaler(),
+        "pca_16": PCA(n_components=16, svd_solver="randomized", random_state=random_state),
+        "pca_32": PCA(n_components=32, svd_solver="randomized", random_state=random_state),
     }
     results = {}
     for name, transformer in transformers.items():
@@ -134,7 +136,7 @@ def run_standardization_pca_experiment(*, dataset=None, random_state=42, k=5):
         else:
             transformer.fit(x_train)
             train_data, test_data = transformer.transform(x_train), transformer.transform(x_test)
-        summary = _evaluate_distance_knn(train_data, y_train, test_data, y_test, k=k)
+        summary = _evaluate_distance_knn(train_data, y_train, test_data, y_test, k=k, cancel_requested=cancel_requested)
         summary["name"] = name
         if isinstance(transformer, PCA):
             summary["explained_variance_ratio"] = transformer.explained_variance_ratio_.copy()
@@ -142,21 +144,25 @@ def run_standardization_pca_experiment(*, dataset=None, random_state=42, k=5):
     return results
 
 
-def run_all_dimensionality_experiments(*, dataset: DigitsDataset | None = None) -> dict[str, Any]:
+def run_all_dimensionality_experiments(*, dataset: MNISTDataset | None = None, train_limit=5000, test_limit=1000, cancel_requested=None) -> dict[str, Any]:
     """Run all conditions against precisely the same dataset and split."""
-    dataset = load_digits_dataset() if dataset is None else dataset
+    source = load_mnist_dataset() if dataset is None else dataset
+    dataset = experiment_subset(source, train_limit=train_limit, test_limit=test_limit)
     return {
         "metadata": {
-            "dataset": "sklearn.datasets.load_digits", "sample_count": len(dataset),
+            "dataset": "tf.keras.datasets.mnist.load_data", "sample_count": len(dataset),
+            "source_sample_count": len(source), "source_train_count": len(source.train_indices), "source_test_count": len(source.test_indices),
+            "split": "official MNIST training/test partitions", "subset_seed": dataset.split_random_state,
             "train_indices": dataset.train_indices.copy(), "test_indices": dataset.test_indices.copy(),
-            "split_seed": dataset.split_random_state, "test_size": dataset.test_size,
+            "train_source_indices": dataset.source_indices[dataset.train_indices],
+            "test_source_indices": dataset.source_indices[dataset.test_indices],
             "k": 5, "metric": "euclidean", "synthetic_seed": 42, "noise_seeds": [0, 1, 2],
-            "synthetic_pairs_per_dimension": 2000, "pca_solver": "full",
+            "synthetic_pairs_per_dimension": 2000, "pca_solver": "randomized",
             "distance_statistics": "All held-out-query to training-reference distances; population variance.",
             "relative_contrast": "Mean over queries of (farthest - nearest) / nearest; positive/zero is infinity.",
             "seed_aggregation": "Arithmetic means of per-seed scalar metrics; population std of accuracy.",
         },
         "synthetic": run_synthetic_dimension_experiment(),
-        "irrelevant_features": run_irrelevant_feature_experiment(dataset=dataset),
-        "standardization_and_pca": run_standardization_pca_experiment(dataset=dataset),
+        "irrelevant_features": run_irrelevant_feature_experiment(dataset=dataset, cancel_requested=cancel_requested),
+        "standardization_and_pca": run_standardization_pca_experiment(dataset=dataset, cancel_requested=cancel_requested),
     }

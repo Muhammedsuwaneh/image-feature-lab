@@ -443,3 +443,11 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# Downloaded TensorFlow MNIST cache and local rollback snapshots
+data/keras/
+backups/
+
+# Local project prompts
+/.prompt
+/.prompts/

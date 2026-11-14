@@ -28,7 +28,7 @@ Item {
                 theme: page.theme
                 eyebrow: "ANALYSIS / DISTANCE GEOMETRY"
                 title: "Distance concentration"
-                description: "Measure the distance distribution from one held-out Digits sample to the training feature space."
+                description: "Measure the distance distribution from one held-out MNIST sample to the training feature space."
             }
 
             RowLayout {
@@ -87,7 +87,7 @@ Item {
                             Button {
                                 id: analyzeButton
                                 text: page.viewModel.distanceAnalysisRunning ? "Analyzing..." : "Analyze distances"
-                                enabled: page.viewModel.hasDigitsDataset && !page.viewModel.distanceAnalysisRunning
+                                enabled: page.viewModel.hasMNISTDataset && !page.viewModel.distanceAnalysisRunning
                                 onClicked: page.viewModel.analyzeDistanceConcentration(queryPosition.value - 1)
                                 contentItem: Text {
                                     text: analyzeButton.text
@@ -124,16 +124,16 @@ Item {
                         }
                         Text {
                             Layout.fillWidth: true
-                            text: page.viewModel.hasDigitsDataset
-                                ? page.viewModel.datasetSampleCount + " Digits samples | " + page.viewModel.datasetFeatureCount + " features"
-                                : "Digits dataset unavailable"
+                            text: page.viewModel.hasMNISTDataset
+                                ? page.viewModel.datasetSampleCount + " MNIST samples | " + page.viewModel.datasetFeatureCount + " features"
+                                : "MNIST dataset unavailable"
                             color: page.theme.ink
                             font.family: "Segoe UI"
                             font.pixelSize: 11
                         }
                         Text {
                             Layout.fillWidth: true
-                            text: page.viewModel.hasDigitsDataset
+                            text: page.viewModel.hasMNISTDataset
                                 ? page.viewModel.datasetTrainCount + " training references | Euclidean distance | test-only query"
                                 : page.viewModel.datasetError
                             color: page.theme.muted

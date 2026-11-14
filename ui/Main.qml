@@ -126,10 +126,10 @@ ApplicationWindow {
                             }
                             Text {
                                   text: mainWindow.viewModel.datasetLoading
-                                      ? "LOADING DIGITS DATASET..."
-                                      : mainWindow.viewModel.hasDigitsDataset
-                                      ? "DIGITS BASELINE / " + mainWindow.viewModel.datasetSampleCount + " SAMPLES"
-                                      : "DIGITS DATASET UNAVAILABLE"
+                                      ? "LOADING MNIST DATASET..."
+                                      : mainWindow.viewModel.hasMNISTDataset
+                                      ? "MNIST BASELINE / " + mainWindow.viewModel.datasetSampleCount + " SAMPLES"
+                                      : "MNIST DATASET UNAVAILABLE"
                                 color: theme.muted
                                 font.family: "Bahnschrift"
                                 font.pixelSize: 9
@@ -143,7 +143,7 @@ ApplicationWindow {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: datasetStateRow.implicitHeight + 20
-                visible: !mainWindow.viewModel.hasDigitsDataset || mainWindow.viewModel.knnEvaluationError.length > 0
+                visible: !mainWindow.viewModel.hasMNISTDataset || mainWindow.viewModel.knnEvaluationError.length > 0
                 color: theme.accentSoft
                 RowLayout {
                     id: datasetStateRow
@@ -155,24 +155,24 @@ ApplicationWindow {
                     Text {
                         objectName: "datasetStatusText"
                         Layout.fillWidth: true
-                        text: mainWindow.viewModel.datasetLoading ? "Initializing scikit-learn Digits..."
+                        text: mainWindow.viewModel.datasetLoading ? "Initializing TensorFlow MNIST..."
                             : mainWindow.viewModel.datasetError ? "Dataset loading failed: " + mainWindow.viewModel.datasetError
                             : mainWindow.viewModel.knnEvaluationError ? "Dataset ready. Baseline evaluation failed: " + mainWindow.viewModel.knnEvaluationError + ". Experiments remain available."
-                            : "Initialize scikit-learn Digits to start analysis and experiments."
+                            : "Initialize TensorFlow MNIST to start analysis and experiments."
                         color: theme.ink
                         font.pixelSize: 12
                         wrapMode: Text.WordWrap
                     }
                     Button {
                         objectName: "loadDatasetButton"
-                        visible: !mainWindow.viewModel.hasDigitsDataset
+                        visible: !mainWindow.viewModel.hasMNISTDataset
                         text: mainWindow.viewModel.datasetLoading ? "Loading..."
-                            : mainWindow.viewModel.datasetError ? "Retry dataset loading" : "Load Digits dataset"
+                            : mainWindow.viewModel.datasetError ? "Retry dataset loading" : "Load MNIST dataset"
                         enabled: !mainWindow.viewModel.datasetLoading
                         onClicked: mainWindow.viewModel.initializeDataset()
                     }
                     Button {
-                        visible: mainWindow.viewModel.hasDigitsDataset && mainWindow.viewModel.knnEvaluationError.length > 0
+                        visible: mainWindow.viewModel.hasMNISTDataset && mainWindow.viewModel.knnEvaluationError.length > 0
                         text: "Retry baseline evaluation"
                         enabled: !mainWindow.viewModel.knnEvaluationRunning
                         onClicked: mainWindow.viewModel.evaluateKnnClassifier()

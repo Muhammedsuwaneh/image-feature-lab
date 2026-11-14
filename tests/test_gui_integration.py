@@ -10,14 +10,16 @@ from PyQt6.QtGui import QFontDatabase, QRawFont, QWindow
 from PyQt6.QtQml import QQmlApplicationEngine, QQmlExpression
 from PyQt6.QtQuick import QQuickWindow
 
-from app.backend.datasets.digits_dataset import load_digits_dataset
+from app.backend.datasets.mnist_dataset import load_mnist_dataset
 from app.backend.machine_learning.knn_classifier import evaluate_knn_classifier
 from app.services.experiment_export import export_experiment_results
 from app.viewmodels.feature_lab_view_model import FeatureLabViewModel
 
 
 @pytest.fixture
-def window(qt_app):
+def window(qt_app, small_mnist, monkeypatch):
+    import app.viewmodels.feature_lab_view_model as module
+    monkeypatch.setattr(module, "load_mnist_dataset", lambda: small_mnist)
     messages = []
     previous = qInstallMessageHandler(lambda kind, context, message: messages.append(message))
     engine = QQmlApplicationEngine()
@@ -79,7 +81,7 @@ def test_qml_navigation_after_scikit_learn_initialization(window, wait_until):
     assert root.isVisible()
     assert QFontDatabase.families()
     assert QRawFont.fromFont(root.property("font")).supportsCharacter("A")
-    assert not view_model.hasDigitsDataset
+    assert not view_model.hasMNISTDataset
     view_model.initializeDataset()
     # Navigation and dataset bindings must agree after initialization.
     for page in view_model._pages:
@@ -88,16 +90,16 @@ def test_qml_navigation_after_scikit_learn_initialization(window, wait_until):
         wait_until(lambda: root.findChild(QObject, name) is not None)
     wait_until(lambda: not view_model.datasetLoading)
     wait_until(lambda: not view_model.knnEvaluationRunning)
-    assert view_model.datasetSampleCount == 1797
-    assert view_model.knnTestAccuracy > 0.96
+    assert view_model.datasetSampleCount == 700
+    assert view_model.knnTestAccuracy > 0.80
     assert_no_qml_errors(messages)
 
 
-def test_uploaded_image_predicts_when_dataset_finishes_loading(window, tmp_path, wait_until):
+def test_uploaded_image_predicts_when_dataset_finishes_loading(window, tmp_path, wait_until, small_mnist):
     root, view_model, engine, messages = window
-    dataset = load_digits_dataset()
+    dataset = small_mnist
     sample_index = int(dataset.test_indices[0])
-    image = np.rint(dataset.images[sample_index] * (255.0 / 16)).astype(np.uint8)
+    image = np.rint(dataset.images[sample_index]).astype(np.uint8)
     image_path = tmp_path / "digit.png"
     success, encoded = cv2.imencode(".png", image)
     assert success
@@ -132,9 +134,9 @@ def test_uploaded_image_predicts_when_dataset_finishes_loading(window, tmp_path,
     assert_no_qml_errors(messages)
 
 
-def test_complete_experiments_render_without_blocking_gui(window, wait_until, tmp_path, qt_app):
+def test_complete_experiments_render_without_blocking_gui(window, wait_until, tmp_path, qt_app, small_mnist):
     root, view_model, engine, messages = window
-    view_model._on_dataset_loaded(load_digits_dataset(), 0.98, "")
+    view_model._on_dataset_loaded(small_mnist, 0.98, "")
     heartbeats = []
     timer = QTimer()
     timer.setInterval(10)
@@ -163,8 +165,8 @@ def test_complete_experiments_render_without_blocking_gui(window, wait_until, tm
         assert screenshot.save(str(tmp_path / "results-window.png"))
         path = export_experiment_results(view_model._dimensionality_results, tmp_path / "records")
         record = json.loads(path.read_text(encoding="utf-8"))
-        assert record["metadata"]["split_seed"] == 42
-        assert len(record["metadata"]["train_indices"]) == 1437
+        assert record["metadata"]["subset_seed"] == 42
+        assert len(record["metadata"]["train_indices"]) == 600
         assert len(record["comparison_rows"]) == 8
         assert len(list(path.parent.glob("*.png"))) == 6
         assert (path.parent / "comparison.csv").is_file()
@@ -173,13 +175,13 @@ def test_complete_experiments_render_without_blocking_gui(window, wait_until, tm
         timer.stop()
 
 
-def test_experiment_failure_is_reported_and_previous_results_survive(window, wait_until, monkeypatch):
+def test_experiment_failure_is_reported_and_previous_results_survive(window, wait_until, monkeypatch, small_mnist):
     import app.viewmodels.feature_lab_view_model as module
 
     _, view_model, _, _ = window
-    view_model._on_dataset_loaded(load_digits_dataset(), 0.98, "")
+    view_model._on_dataset_loaded(small_mnist, 0.98, "")
     view_model._dimensionality_comparison_rows = [{"label": "previous result"}]
-    def fail(dataset):
+    def fail(dataset, **kwargs):
         raise RuntimeError("Experiment failed deliberately")
     monkeypatch.setattr(module, "run_experiment_suite", fail)
     view_model.runDimensionalityExperiments()
@@ -188,9 +190,9 @@ def test_experiment_failure_is_reported_and_previous_results_survive(window, wai
     assert view_model.dimensionalityComparisonRows == [{"label": "previous result"}]
 
 
-def test_supplied_two_is_predicted_in_image_analysis_ui(window, wait_until):
+def test_supplied_two_is_predicted_in_image_analysis_ui(window, wait_until, small_mnist):
     root, view_model, _, messages = window
-    dataset = load_digits_dataset()
+    dataset = small_mnist
     view_model._on_dataset_loaded(dataset, evaluate_knn_classifier(dataset)["test_accuracy"], "")
     image = Path(__file__).parent / "fixtures" / "digit_2.png"
     view_model.navigateTo("ImageAnalysis")

@@ -1,13 +1,13 @@
 import base64
 import math
 
-from app.backend.datasets.digits_dataset import load_digits_dataset
+from app.backend.datasets.mnist_dataset import load_mnist_dataset
 from app.viewmodels.feature_lab_view_model import FeatureLabViewModel
 
 
-def test_distance_concentration_uses_held_out_query_and_training_references(wait_until):
+def test_distance_concentration_uses_held_out_query_and_training_references(wait_until, small_mnist):
     view_model = FeatureLabViewModel()
-    view_model._on_dataset_loaded(load_digits_dataset(), 0.0, "")
+    view_model._on_dataset_loaded(small_mnist, 0.0, "")
 
     view_model.analyzeDistanceConcentration(0)
     wait_until(lambda: not view_model.distanceAnalysisRunning)
@@ -15,7 +15,7 @@ def test_distance_concentration_uses_held_out_query_and_training_references(wait
 
     result = view_model.distanceConcentrationResult
     assert result["reference_count"] == view_model.datasetTrainCount
-    assert result["query_index"] not in view_model._digits_dataset.train_indices
+    assert result["query_index"] not in view_model._mnist_dataset.train_indices
     assert result["nearest_sample_label"] in view_model.datasetClasses
     assert result["farthest_sample_label"] in view_model.datasetClasses
     assert result["minimum_distance"] <= result["mean_distance"] <= result["maximum_distance"]
@@ -28,9 +28,9 @@ def test_distance_concentration_uses_held_out_query_and_training_references(wait
     )
 
 
-def test_distance_concentration_reports_invalid_test_selection():
+def test_distance_concentration_reports_invalid_test_selection(small_mnist):
     view_model = FeatureLabViewModel()
-    view_model._on_dataset_loaded(load_digits_dataset(), 0.0, "")
+    view_model._on_dataset_loaded(small_mnist, 0.0, "")
 
     view_model.analyzeDistanceConcentration(view_model.datasetTestCount)
 

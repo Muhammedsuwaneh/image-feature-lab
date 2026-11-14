@@ -17,6 +17,8 @@ class BackgroundTask(QThread):
     def run(self) -> None:
         try:
             result = self._operation()
+        except InterruptedError:
+            return
         except Exception as error:
             logging.getLogger(__name__).exception("Background operation failed")
             self.failed.emit(str(error) or type(error).__name__)

@@ -6,6 +6,7 @@ from collections.abc import Sequence
 import numpy as np
 
 from app.backend.validation import positive_integer
+from app.backend.calculations.pairwise import distance_batches
 
 
 def _as_1d_numeric_array(values: Sequence[float] | np.ndarray, *, name: str) -> np.ndarray:
@@ -131,7 +132,7 @@ def analyze_distance_to_samples(
             f"Query vector dimension {query.shape[0]} does not match reference dimension {references.shape[1]}."
         )
 
-    distances = np.linalg.norm(references - query, axis=1)
+    distances = next(distance_batches(references, query.reshape(1, -1)))[1][0]
     nearest_index = int(np.argmin(distances))
     farthest_index = int(np.argmax(distances))
 

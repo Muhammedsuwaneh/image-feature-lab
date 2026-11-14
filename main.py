@@ -17,8 +17,8 @@ def main() -> int:
     app.setApplicationName("FeatureLab")
     view_model = FeatureLabViewModel(app)
     app.aboutToQuit.connect(view_model.shutdown)
-    # load_digits is bundled with scikit-learn. Complete that small startup
-    # operation before constructing QML, so the first window already has data.
+    # Load TensorFlow MNIST before constructing QML. The first run downloads
+    # the official archive; subsequent starts reuse the verified Keras cache.
     view_model.initializeDataset()
     engine = QQmlApplicationEngine()
     engine.setInitialProperties({"viewModel": view_model})

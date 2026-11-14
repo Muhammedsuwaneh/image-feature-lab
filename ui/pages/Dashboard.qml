@@ -43,9 +43,9 @@ Item {
                     theme: page.theme
                     label: "DATASET"
                         value: page.viewModel.datasetLoading ? "Loading..."
-                            : page.viewModel.hasDigitsDataset ? "Digits baseline"
+                            : page.viewModel.hasMNISTDataset ? "MNIST baseline"
                             : page.viewModel.datasetError ? "Load failed" : "Not loaded"
-                        detail: page.viewModel.hasDigitsDataset
+                        detail: page.viewModel.hasMNISTDataset
                             ? page.viewModel.datasetSampleCount + " images / " + page.viewModel.datasetClassCount + " classes"
                             : page.viewModel.datasetError
                     marker: page.theme.accent
@@ -55,10 +55,10 @@ Item {
                     Layout.preferredHeight: 112
                     theme: page.theme
                     label: "FEATURE SPACE"
-                          value: page.viewModel.hasDigitsDataset
+                          value: page.viewModel.hasMNISTDataset
                               ? page.viewModel.datasetFeatureCount + " dimensions"
                               : "Not available"
-                          detail: "8 x 8 grayscale pixels / intensities 0-16"
+                          detail: "28 x 28 grayscale pixels / intensities 0-1"
                     marker: page.theme.green
                 }
                 MetricTile {
@@ -69,7 +69,7 @@ Item {
                     value: page.viewModel.knnEvaluationRunning ? "Evaluating..." : page.viewModel.hasKnnEvaluation
                         ? (page.viewModel.knnTestAccuracy * 100).toFixed(2) + "%"
                         : "Not evaluated"
-                    detail: page.viewModel.knnEvaluationError ? page.viewModel.knnEvaluationError : page.viewModel.hasDigitsDataset
+                    detail: page.viewModel.knnEvaluationError ? page.viewModel.knnEvaluationError : page.viewModel.hasMNISTDataset
                         ? "k = " + page.viewModel.knnK + " / Euclidean distance"
                         : "No nearest-neighbor experiment has run"
                     marker: "#879A8D"
@@ -156,8 +156,8 @@ Item {
                         }
                         Repeater {
                             model: [
-                                { step: "01", name: "Load Digits baseline", state: page.viewModel.datasetLoading ? "LOADING" : page.viewModel.hasDigitsDataset ? "READY" : "NOT LOADED" },
-                                { step: "02", name: "Extract feature vectors", state: page.viewModel.hasDigitsDataset ? "READY" : "PENDING" },
+                                { step: "01", name: "Load MNIST baseline", state: page.viewModel.datasetLoading ? "LOADING" : page.viewModel.hasMNISTDataset ? "READY" : "NOT LOADED" },
+                                { step: "02", name: "Extract feature vectors", state: page.viewModel.hasMNISTDataset ? "READY" : "PENDING" },
                                 { step: "03", name: "Compare distances", state: page.viewModel.experimentsRunning ? "RUNNING" : page.viewModel.dimensionalityCharts.length > 0 ? "COMPLETE" : "PENDING" },
                                 { step: "04", name: "Evaluate neighbors", state: page.viewModel.knnEvaluationRunning ? "RUNNING" : page.viewModel.hasKnnEvaluation ? "COMPLETE" : "PENDING" }
                             ]
@@ -193,7 +193,7 @@ Item {
                         Item { Layout.fillHeight: true }
                         Text {
                             Layout.fillWidth: true
-                                text: page.viewModel.hasDigitsDataset
+                                text: page.viewModel.hasMNISTDataset
                                     ? page.viewModel.datasetTrainCount + " training / " + page.viewModel.datasetTestCount + " test samples. " + (page.viewModel.experimentsRunning ? "Experiments running." : page.viewModel.dimensionalityCharts.length > 0 ? "Experiment results are ready." : "Ready to run experiments.")
                                     : page.viewModel.datasetError
                             color: page.theme.muted

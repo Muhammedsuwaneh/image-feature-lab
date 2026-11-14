@@ -58,12 +58,12 @@ def _condition_data(results: dict[str, Any]) -> list[dict[str, Any]]:
             "test_accuracy_std": float(metrics.get("test_accuracy_std", 0.0)),
         })
 
-    feature_counts = {"original_64": 64, "standardized": 64, "pca_16": 16, "pca_32": 32}
-    labels = {"original_64": "Original", "standardized": "Standardized", "pca_16": "PCA 16", "pca_32": "PCA 32"}
+    feature_counts = {"original": 784, "standardized": 784, "pca_16": 16, "pca_32": 32}
+    labels = {"original": "Original", "standardized": "Standardized", "pca_16": "PCA 16", "pca_32": "PCA 32"}
     for name, metrics in results["standardization_and_pca"].items():
         rows.append({
             "label": labels[name],
-            "feature_count": feature_counts[name],
+            "feature_count": int(metrics.get("feature_size", feature_counts[name])),
             "nearest_distances": np.asarray(metrics["nearest_distances"], dtype=np.float64),
             "farthest_distances": np.asarray(metrics["farthest_distances"], dtype=np.float64),
             "test_accuracy": float(metrics["test_accuracy"]),
@@ -157,7 +157,7 @@ def build_result_visualizations(results: dict[str, Any]) -> dict[str, Any]:
     add_chart("Classification performance", "Held-out k-NN accuracy; error bars show population std over noise seeds, not confidence intervals.", draw_accuracy)
 
     def draw_distributions(axes: Axes) -> None:
-        selected = [item for item in conditions if item["label"] in {"Original", "Irrelevant 256", "Standardized", "PCA 16", "PCA 32"}]
+        selected = [item for item in conditions if item["label"] in {"Original", "Irrelevant 2352", "Standardized", "PCA 16", "PCA 32"}]
         colors = ["#247A57", "#C56A3D", "#3E7890", "#8B6B42", "#6E8C65"]
         for item, color in zip(selected, colors):
             axes.hist(item["nearest_distances"], bins=24, density=True, histtype="step", linewidth=1.7, color=color, label=item["label"])

@@ -26,7 +26,7 @@ Item {
                 theme: page.theme
                 eyebrow: "EXPERIMENTS / DIMENSIONALITY"
                 title: "Vary the feature dimension."
-                description: "Set up a controlled comparison of distance geometry and nearest-neighbor behavior across feature dimensions."
+                description: "Compare MNIST distance geometry and k-NN performance on a reproducible subset of 5,000 training and 1,000 test images."
             }
 
             RowLayout {
@@ -71,7 +71,7 @@ Item {
                             Text { text: "Feature dimensions (fixed)"; color: page.theme.ink; font.family: "Segoe UI"; font.pixelSize: 11 }
                             TextField {
                                 Layout.fillWidth: true
-                                text: "64, 96, 160, 256"
+                                text: "784, 1024, 1568, 2352"
                                 color: "#000000"
                                 readOnly: true
                                 selectByMouse: true
@@ -116,7 +116,7 @@ Item {
                             Layout.alignment: Qt.AlignRight
                             text: page.viewModel.datasetLoading ? "Loading dataset..."
                                 : page.viewModel.experimentsRunning ? "Running..."
-                                : page.viewModel.hasDigitsDataset ? "Run experiment" : "Load dataset and run"
+                                : page.viewModel.hasMNISTDataset ? "Run experiment" : "Load dataset and run"
                             enabled: !page.viewModel.datasetLoading && !page.viewModel.experimentsRunning
                             onClicked: page.viewModel.runDimensionalityExperiments()
                             contentItem: Text {

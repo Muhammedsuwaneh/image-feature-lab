@@ -4,7 +4,7 @@ import logging
 import cv2
 from PyQt6.QtCore import QObject, QUrl, pyqtProperty, pyqtSignal, pyqtSlot
 
-from app.backend.datasets.digits_dataset import DigitsDataset, load_digits_dataset
+from app.backend.datasets.mnist_dataset import MNISTDataset, load_mnist_dataset
 from app.backend.image_processing.image_preprocessor import ProcessedImage, preprocess_image
 from app.backend.machine_learning.knn_classifier import (
     evaluate_knn_classifier,
@@ -64,27 +64,27 @@ class FeatureLabViewModel(QObject):
         self._dimensionality_comparison_rows: list[dict[str, object]] = []
         self._distance_concentration_result: dict[str, object] = {}
         self._distance_concentration_chart = ""
-        self._digits_dataset: DigitsDataset | None = None
+        self._mnist_dataset: MNISTDataset | None = None
         self._dataset_error = ""
         self._dataset_loading = False
 
     @pyqtSlot()
     def initializeDataset(self) -> None:
-        if self._closing or self._dataset_loading or self._digits_dataset is not None:
+        if self._closing or self._dataset_loading or self._mnist_dataset is not None:
             return
         self._dataset_loading = True
         self._dataset_error = ""
         self.datasetChanged.emit()
         try:
-            dataset = load_digits_dataset()
+            dataset = load_mnist_dataset()
         except Exception as error:
-            logging.getLogger(__name__).exception("Could not load sklearn.datasets.load_digits")
+            logging.getLogger(__name__).exception("Could not load tf.keras.datasets.mnist.load_data")
             self._on_dataset_failed(str(error) or type(error).__name__)
         else:
             self._on_dataset_available(dataset)
 
     @pyqtSlot(object)
-    def _on_dataset_available(self, dataset: DigitsDataset) -> None:
+    def _on_dataset_available(self, dataset: MNISTDataset) -> None:
         if self._closing:
             return
         # Publish the data first. Baseline evaluation must not gate experiments.
@@ -101,7 +101,7 @@ class FeatureLabViewModel(QObject):
         self._on_dataset_loaded(None, None, error)
         if self._experiment_requested:
             self._experiment_requested = False
-            self._experiment_error = "Could not load the Digits dataset: " + error
+            self._experiment_error = "Could not load the MNIST dataset: " + error
             self.dimensionalityExperimentChanged.emit()
 
     @pyqtSlot(object)
@@ -123,10 +123,10 @@ class FeatureLabViewModel(QObject):
         self._knn_evaluation_error = error
         self.datasetChanged.emit()
 
-    def _on_dataset_loaded(self, dataset: DigitsDataset | None, accuracy: float | None, error: str) -> None:
+    def _on_dataset_loaded(self, dataset: MNISTDataset | None, accuracy: float | None, error: str) -> None:
         if self._closing:
             return
-        self._digits_dataset = dataset
+        self._mnist_dataset = dataset
         self._knn_test_accuracy = float(accuracy) if accuracy is not None else 0.0
         self._knn_evaluation_ready = dataset is not None and accuracy is not None
         self._dataset_error = error
@@ -140,6 +140,9 @@ class FeatureLabViewModel(QObject):
     def shutdown(self) -> None:
         # A running QThread must finish before its parent QObject is destroyed.
         self._closing = True
+        for task in (self._baseline_task, self._experiment_task, self._distance_task):
+            if task is not None:
+                task.requestInterruption()
         for task in (self._baseline_task, self._experiment_task, self._distance_task):
             if task is not None:
                 task.wait()
@@ -235,8 +238,8 @@ class FeatureLabViewModel(QObject):
         return self._original_image_height
 
     @pyqtProperty(bool, notify=datasetChanged)
-    def hasDigitsDataset(self) -> bool:
-        return self._digits_dataset is not None
+    def hasMNISTDataset(self) -> bool:
+        return self._mnist_dataset is not None
 
     @pyqtProperty(int, notify=datasetChanged)
     def knnK(self) -> int:
@@ -252,7 +255,7 @@ class FeatureLabViewModel(QObject):
 
     @pyqtProperty(bool, notify=selectedImageChanged)
     def hasKnnPrediction(self) -> bool:
-        return self._digits_dataset is not None and self._knn_prediction >= 0
+        return self._mnist_dataset is not None and self._knn_prediction >= 0
 
     @pyqtProperty("QVariantList", notify=selectedImageChanged)
     def knnNeighborLabels(self) -> list[int]:
@@ -292,27 +295,27 @@ class FeatureLabViewModel(QObject):
 
     @pyqtProperty(int, notify=datasetChanged)
     def datasetSampleCount(self) -> int:
-        return len(self._digits_dataset) if self._digits_dataset else 0
+        return len(self._mnist_dataset) if self._mnist_dataset else 0
 
     @pyqtProperty(int, notify=datasetChanged)
     def datasetFeatureCount(self) -> int:
-        return int(self._digits_dataset.feature_vectors.shape[1]) if self._digits_dataset else 0
+        return int(self._mnist_dataset.feature_vectors.shape[1]) if self._mnist_dataset else 0
 
     @pyqtProperty(int, notify=datasetChanged)
     def datasetClassCount(self) -> int:
-        return len(self._digits_dataset.classes) if self._digits_dataset else 0
+        return len(self._mnist_dataset.classes) if self._mnist_dataset else 0
 
     @pyqtProperty(int, notify=datasetChanged)
     def datasetTrainCount(self) -> int:
-        return int(self._digits_dataset.train_indices.size) if self._digits_dataset else 0
+        return int(self._mnist_dataset.train_indices.size) if self._mnist_dataset else 0
 
     @pyqtProperty(int, notify=datasetChanged)
     def datasetTestCount(self) -> int:
-        return int(self._digits_dataset.test_indices.size) if self._digits_dataset else 0
+        return int(self._mnist_dataset.test_indices.size) if self._mnist_dataset else 0
 
     @pyqtProperty("QVariantList", notify=datasetChanged)
     def datasetClasses(self) -> list[int]:
-        return list(self._digits_dataset.classes) if self._digits_dataset else []
+        return list(self._mnist_dataset.classes) if self._mnist_dataset else []
 
     @pyqtSlot(str)
     def navigateTo(self, page: str) -> None:
@@ -322,7 +325,7 @@ class FeatureLabViewModel(QObject):
 
     @pyqtSlot()
     def evaluateKnnClassifier(self) -> None:
-        if self._closing or self._digits_dataset is None or self._knn_evaluation_running:
+        if self._closing or self._mnist_dataset is None or self._knn_evaluation_running:
             return
         if self._baseline_task is not None:
             if self._baseline_task.isRunning():
@@ -332,8 +335,9 @@ class FeatureLabViewModel(QObject):
         self._knn_evaluation_ready = False
         self._knn_evaluation_error = ""
         self.datasetChanged.emit()
-        dataset = self._digits_dataset
-        self._baseline_task = BackgroundTask(lambda: evaluate_knn_classifier(dataset, k=self._knn_k), self)
+        dataset = self._mnist_dataset
+        task = BackgroundTask(lambda: evaluate_knn_classifier(dataset, k=self._knn_k, cancel_requested=task.isInterruptionRequested, accuracy_only=True), self)
+        self._baseline_task = task
         self._baseline_task.succeeded.connect(self._on_baseline_evaluated)
         self._baseline_task.failed.connect(self._on_baseline_failed)
         self._baseline_task.start()
@@ -342,7 +346,7 @@ class FeatureLabViewModel(QObject):
     def runDimensionalityExperiments(self) -> None:
         if self._closing or self._experiments_running or (self._experiment_task and self._experiment_task.isRunning()):
             return
-        if self._digits_dataset is None:
+        if self._mnist_dataset is None:
             self._experiment_requested = True
             self._experiment_error = ""
             self.dimensionalityExperimentChanged.emit()
@@ -353,8 +357,9 @@ class FeatureLabViewModel(QObject):
         self.dimensionalityExperimentChanged.emit()
         if self._experiment_task is not None:
             self._experiment_task.deleteLater()
-        dataset = self._digits_dataset
-        self._experiment_task = BackgroundTask(lambda: run_experiment_suite(dataset), self)
+        dataset = self._mnist_dataset
+        task = BackgroundTask(lambda: run_experiment_suite(dataset, cancel_requested=task.isInterruptionRequested), self)
+        self._experiment_task = task
         self._experiment_task.succeeded.connect(self._on_experiments_completed)
         self._experiment_task.failed.connect(self._on_experiments_failed)
         self._experiment_task.start()
@@ -382,17 +387,17 @@ class FeatureLabViewModel(QObject):
     def analyzeDistanceConcentration(self, test_position: int) -> None:
         if self._closing or self._distance_running or (self._distance_task and self._distance_task.isRunning()):
             return
-        if self._digits_dataset is None:
-            self._on_distance_failed("The Digits dataset is unavailable.")
+        if self._mnist_dataset is None:
+            self._on_distance_failed("The MNIST dataset is unavailable.")
             return
-        if test_position < 0 or test_position >= len(self._digits_dataset.test_indices):
+        if test_position < 0 or test_position >= len(self._mnist_dataset.test_indices):
             self._on_distance_failed("Select a query from the held-out test split.")
             return
         self._distance_running = True
         self.distanceConcentrationChanged.emit()
         if self._distance_task is not None:
             self._distance_task.deleteLater()
-        dataset = self._digits_dataset
+        dataset = self._mnist_dataset
         self._distance_task = BackgroundTask(lambda: analyze_distance_query(dataset, test_position), self)
         self._distance_task.succeeded.connect(self._on_distance_completed)
         self._distance_task.failed.connect(self._on_distance_failed)
@@ -467,7 +472,7 @@ class FeatureLabViewModel(QObject):
                 self._feature_vector = processed.feature_vector.tolist()
                 self._original_image_width = processed.original_width
                 self._original_image_height = processed.original_height
-                if self._digits_dataset is not None:
+                if self._mnist_dataset is not None:
                     self._predict_selected_image()
             except (OSError, ValueError, cv2.error) as error:
                 self._processing_error = str(error)
@@ -479,13 +484,13 @@ class FeatureLabViewModel(QObject):
 
     def _predict_selected_image(self) -> None:
         try:
-            prediction = predict_knn_for_feature_vector(self._feature_vector, self._digits_dataset, k=self._knn_k)
+            prediction = predict_knn_for_feature_vector(self._feature_vector, self._mnist_dataset, k=self._knn_k)
             self._knn_prediction = int(prediction["predicted_label"])
             self._knn_neighbor_labels = [int(value) for value in prediction["neighbor_labels"]]
             self._knn_neighbor_distances = [float(value) for value in prediction["neighbor_distances"]]
             self._knn_neighbors = [
-                {"index": int(index), "label": int(self._digits_dataset.labels[index]),
-                 "distance": float(distance), "source": digit_image_url(self._digits_dataset.images[index])}
+                {"index": int(index), "label": int(self._mnist_dataset.labels[index]),
+                 "distance": float(distance), "source": digit_image_url(self._mnist_dataset.images[index])}
                 for index, distance in zip(prediction["neighbor_dataset_indices"], prediction["neighbor_distances"])
             ]
             self._knn_prediction_error = ""

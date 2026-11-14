@@ -1,0 +1,27 @@
+{
+  "dataset": "tf.keras.datasets.mnist.load_data",
+  "training_samples": 60000,
+  "test_samples": 10000,
+  "features": 784,
+  "image_shape": [
+    28,
+    28
+  ],
+  "feature_range": [
+    0,
+    1
+  ],
+  "classifier": "Euclidean k-NN",
+  "k": 5,
+  "correct_predictions": 9688,
+  "test_accuracy": 0.9688,
+  "elapsed_seconds": 330.71745700004976,
+  "supplied_digit_two_prediction": 2,
+  "supplied_digit_two_neighbor_labels": [
+    2,
+    2,
+    2,
+    2,
+    2
+  ]
+}

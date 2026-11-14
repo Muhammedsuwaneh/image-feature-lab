@@ -35,7 +35,7 @@ def export_experiment_results(results: dict, output_directory: str | Path) -> Pa
     record = dict(results)
     record["environment"] = {
         "python": platform.python_version(),
-        "packages": {name: version(name) for name in ("numpy", "scikit-learn", "matplotlib", "opencv-python", "PyQt6")},
+        "packages": {name: version(name) for name in ("tensorflow", "keras", "numpy", "scikit-learn", "matplotlib", "opencv-python", "PyQt6")},
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
     }
     record["comparison_rows"] = visualizations["comparison_rows"]
