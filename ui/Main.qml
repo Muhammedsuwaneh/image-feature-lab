@@ -37,6 +37,16 @@ ApplicationWindow {
         "Results": "pages/Results.qml"
     })
 
+    function loadCurrentPage() {
+        pageLoader.setSource(pageSources[viewModel.currentPage], {"viewModel": viewModel, "theme": theme})
+    }
+
+    Component.onCompleted: loadCurrentPage()
+    Connections {
+        target: mainWindow.viewModel
+        function onCurrentPageChanged() { mainWindow.loadCurrentPage() }
+    }
+
     RowLayout {
         anchors.fill: parent
         spacing: 0
@@ -104,7 +114,9 @@ ApplicationWindow {
                                 color: theme.accent
                             }
                             Text {
-                                  text: mainWindow.viewModel.hasDigitsDataset
+                                  text: mainWindow.viewModel.datasetLoading
+                                      ? "LOADING DIGITS DATASET..."
+                                      : mainWindow.viewModel.hasDigitsDataset
                                       ? "DIGITS BASELINE / " + mainWindow.viewModel.datasetSampleCount + " SAMPLES"
                                       : "DIGITS DATASET UNAVAILABLE"
                                 color: theme.muted
@@ -117,16 +129,51 @@ ApplicationWindow {
                 }
             }
 
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: datasetStateRow.implicitHeight + 20
+                visible: !mainWindow.viewModel.hasDigitsDataset || mainWindow.viewModel.knnEvaluationError.length > 0
+                color: theme.accentSoft
+                RowLayout {
+                    id: datasetStateRow
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.margins: 20
+                    spacing: 12
+                    Text {
+                        objectName: "datasetStatusText"
+                        Layout.fillWidth: true
+                        text: mainWindow.viewModel.datasetLoading ? "Initializing scikit-learn Digits..."
+                            : mainWindow.viewModel.datasetError ? "Dataset loading failed: " + mainWindow.viewModel.datasetError
+                            : mainWindow.viewModel.knnEvaluationError ? "Dataset ready. Baseline evaluation failed: " + mainWindow.viewModel.knnEvaluationError + ". Experiments remain available."
+                            : "Initialize scikit-learn Digits to start analysis and experiments."
+                        color: theme.ink
+                        font.pixelSize: 12
+                        wrapMode: Text.WordWrap
+                    }
+                    Button {
+                        objectName: "loadDatasetButton"
+                        visible: !mainWindow.viewModel.hasDigitsDataset
+                        text: mainWindow.viewModel.datasetLoading ? "Loading..."
+                            : mainWindow.viewModel.datasetError ? "Retry dataset loading" : "Load Digits dataset"
+                        enabled: !mainWindow.viewModel.datasetLoading
+                        onClicked: mainWindow.viewModel.initializeDataset()
+                    }
+                    Button {
+                        visible: mainWindow.viewModel.hasDigitsDataset && mainWindow.viewModel.knnEvaluationError.length > 0
+                        text: "Retry baseline evaluation"
+                        enabled: !mainWindow.viewModel.knnEvaluationRunning
+                        onClicked: mainWindow.viewModel.evaluateKnnClassifier()
+                    }
+                }
+            }
+
             Loader {
                 id: pageLoader
                 objectName: "pageLoader"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                source: mainWindow.pageSources[mainWindow.viewModel.currentPage] || ""
-                onLoaded: {
-                    item.viewModel = mainWindow.viewModel
-                    item.theme = theme
-                }
             }
         }
     }

@@ -8,8 +8,8 @@ import "../components"
 Item {
     id: page
     objectName: "resultsPage"
-    property var viewModel
-    property var theme
+    required property var viewModel
+    required property var theme
 
     ScrollView {
         anchors.fill: parent
@@ -36,17 +36,23 @@ Item {
                 spacing: 12
                 Text {
                     Layout.fillWidth: true
-                    text: page.viewModel.dimensionalityCharts.length > 0
+                    text: page.viewModel.experimentsRunning ? "Running experiments and rendering charts..."
+                        : page.viewModel.experimentError ? "Experiment failed: " + page.viewModel.experimentError
+                        : page.viewModel.dimensionalityCharts.length > 0
                         ? "Results reflect the latest completed experiment run."
                         : "Run the experiment suite to generate measured results."
                     color: page.theme.muted
                     font.family: "Segoe UI"
                     font.pixelSize: 11
+                    wrapMode: Text.WordWrap
                 }
                 Button {
                     id: runExperimentButton
-                    text: "Run experiments"
-                    enabled: page.viewModel.hasDigitsDataset
+                    objectName: "runExperimentsButton"
+                    text: page.viewModel.datasetLoading ? "Loading dataset..."
+                        : page.viewModel.experimentsRunning ? "Running..."
+                        : page.viewModel.hasDigitsDataset ? "Run experiments" : "Load dataset and run"
+                    enabled: !page.viewModel.datasetLoading && !page.viewModel.experimentsRunning
                     onClicked: page.viewModel.runDimensionalityExperiments()
                     contentItem: Text {
                         text: runExperimentButton.text
@@ -84,10 +90,12 @@ Item {
                         Layout.fillWidth: true
                         spacing: 10
                         Repeater {
-                            model: ["CONDITION", "FEATURES", "MEAN NN DIST.", "NN CV", "REL. CONTRAST", "ACCURACY"]
+                            model: ["CONDITION", "FEATURES", "MEAN DIST.", "DIST. STD", "DIST. CV", "MEAN CONTRAST", "ACCURACY"]
                             Text {
                                 required property var modelData
                                 Layout.fillWidth: true
+                                Layout.preferredWidth: 0
+                                Layout.minimumWidth: 0
                                 text: modelData
                                 color: page.theme.muted
                                 font.family: "Bahnschrift"
@@ -104,10 +112,12 @@ Item {
                             Layout.fillWidth: true
                             spacing: 10
                             Repeater {
-                                model: [comparisonRow.modelData.label, comparisonRow.modelData.feature_count, Number(comparisonRow.modelData.mean_distance).toFixed(3), Number(comparisonRow.modelData.coefficient_of_variation).toFixed(3), Number(comparisonRow.modelData.relative_contrast).toFixed(3), (Number(comparisonRow.modelData.test_accuracy) * 100).toFixed(2) + "%"]
+                                model: [comparisonRow.modelData.label, comparisonRow.modelData.feature_count, Number(comparisonRow.modelData.mean_distance).toFixed(3), Number(comparisonRow.modelData.distance_std).toFixed(3), Number(comparisonRow.modelData.coefficient_of_variation).toFixed(3), Number(comparisonRow.modelData.relative_contrast).toFixed(3), (Number(comparisonRow.modelData.test_accuracy) * 100).toFixed(2) + "%"]
                                 Text {
                                     required property var modelData
                                     Layout.fillWidth: true
+                                    Layout.preferredWidth: 0
+                                    Layout.minimumWidth: 0
                                     text: modelData
                                     color: page.theme.ink
                                     font.family: "Segoe UI"
@@ -169,6 +179,7 @@ Item {
                                 wrapMode: Text.WordWrap
                             }
                             Image {
+                                objectName: "resultChartImage"
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
                                 source: chartDelegate.modelData.source

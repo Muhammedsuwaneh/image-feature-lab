@@ -6,8 +6,8 @@ import "../components"
 Item {
     id: page
     objectName: "dimensionalityExperimentsPage"
-    property var viewModel
-    property var theme
+    required property var viewModel
+    required property var theme
 
     ScrollView {
         anchors.fill: parent
@@ -112,9 +112,12 @@ Item {
                         }
                         Button {
                             id: runExperimentButton
+                            objectName: "runExperimentsButton"
                             Layout.alignment: Qt.AlignRight
-                            text: "Run experiment"
-                            enabled: page.viewModel && page.viewModel.hasDigitsDataset
+                            text: page.viewModel.datasetLoading ? "Loading dataset..."
+                                : page.viewModel.experimentsRunning ? "Running..."
+                                : page.viewModel.hasDigitsDataset ? "Run experiment" : "Load dataset and run"
+                            enabled: !page.viewModel.datasetLoading && !page.viewModel.experimentsRunning
                             onClicked: page.viewModel.runDimensionalityExperiments()
                             contentItem: Text {
                                 text: runExperimentButton.text
@@ -191,7 +194,9 @@ Item {
                     TextArea {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        text: page.viewModel ? page.viewModel.dimensionalityExperimentSummary : "No experiment output yet."
+                        text: page.viewModel.experimentsRunning ? "Running experiments and rendering charts... You can continue navigating."
+                            : page.viewModel.experimentError ? "Experiment failed: " + page.viewModel.experimentError
+                            : page.viewModel.dimensionalityExperimentSummary
                         color: page.theme.ink
                         font.family: "Consolas"
                         font.pixelSize: 10

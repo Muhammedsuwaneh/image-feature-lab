@@ -5,6 +5,8 @@ from collections.abc import Sequence
 
 import numpy as np
 
+from app.backend.validation import positive_integer
+
 
 def _as_1d_numeric_array(values: Sequence[float] | np.ndarray, *, name: str) -> np.ndarray:
     array = np.asarray(values, dtype=np.float64)
@@ -17,10 +19,17 @@ def _as_1d_numeric_array(values: Sequence[float] | np.ndarray, *, name: str) -> 
     return array.ravel()
 
 
+def _distances(values) -> np.ndarray:
+    result = _as_1d_numeric_array(values, name="Distance values")
+    if np.any(result < 0):
+        raise ValueError("Distance values must be non-negative.")
+    return result
+
+
 def euclidean_distance(x: Sequence[float] | np.ndarray, y: Sequence[float] | np.ndarray) -> float:
     """Return the Euclidean distance between two vectors."""
-    x_array = np.asarray(x, dtype=np.float64).ravel()
-    y_array = np.asarray(y, dtype=np.float64).ravel()
+    x_array = _as_1d_numeric_array(x, name="First vector")
+    y_array = _as_1d_numeric_array(y, name="Second vector")
     if x_array.shape != y_array.shape:
         raise ValueError(f"Vectors must have identical shapes; got {x_array.shape} and {y_array.shape}.")
     return float(np.linalg.norm(x_array - y_array))
@@ -28,8 +37,8 @@ def euclidean_distance(x: Sequence[float] | np.ndarray, y: Sequence[float] | np.
 
 def squared_euclidean_distance(x: Sequence[float] | np.ndarray, y: Sequence[float] | np.ndarray) -> float:
     """Return the squared Euclidean distance between two vectors."""
-    x_array = np.asarray(x, dtype=np.float64).ravel()
-    y_array = np.asarray(y, dtype=np.float64).ravel()
+    x_array = _as_1d_numeric_array(x, name="First vector")
+    y_array = _as_1d_numeric_array(y, name="Second vector")
     if x_array.shape != y_array.shape:
         raise ValueError(f"Vectors must have identical shapes; got {x_array.shape} and {y_array.shape}.")
     return float(np.sum((x_array - y_array) ** 2))
@@ -37,19 +46,19 @@ def squared_euclidean_distance(x: Sequence[float] | np.ndarray, y: Sequence[floa
 
 def mean_distance(values: Sequence[float] | np.ndarray) -> float:
     """Return the arithmetic mean of a distance array."""
-    distances = _as_1d_numeric_array(values, name="Distance values")
+    distances = _distances(values)
     return float(np.mean(distances))
 
 
 def distance_variance(values: Sequence[float] | np.ndarray) -> float:
     """Return the population variance of a distance array."""
-    distances = _as_1d_numeric_array(values, name="Distance values")
+    distances = _distances(values)
     return float(np.var(distances, ddof=0))
 
 
 def distance_standard_deviation(values: Sequence[float] | np.ndarray) -> float:
     """Return the population standard deviation of a distance array."""
-    distances = _as_1d_numeric_array(values, name="Distance values")
+    distances = _distances(values)
     return float(np.std(distances, ddof=0))
 
 
@@ -65,11 +74,11 @@ def std_distance(values: Sequence[float] | np.ndarray) -> float:
 
 def coefficient_of_variation(values: Sequence[float] | np.ndarray) -> float:
     """Compute the coefficient of variation for ordinary distances: sigma / mu."""
-    distances = _as_1d_numeric_array(values, name="Distance values")
+    distances = _distances(values)
     mean_value = float(np.mean(distances))
     std_value = float(np.std(distances, ddof=0))
-    if np.isclose(mean_value, 0.0):
-        return 0.0 if np.isclose(std_value, 0.0) else math.inf
+    if mean_value == 0.0:
+        return 0.0 if std_value == 0.0 else math.inf
     return float(std_value / mean_value)
 
 
@@ -80,12 +89,12 @@ def ordinary_distance_cv(values: Sequence[float] | np.ndarray) -> float:
 
 def squared_distance_coefficient_of_variation(values: Sequence[float] | np.ndarray) -> float:
     """Compute CV for squared distances: sqrt(Var(D^2)) / E[D^2]."""
-    distances = _as_1d_numeric_array(values, name="Distance values")
+    distances = _distances(values)
     squared_values = distances**2
     mean_value = float(np.mean(squared_values))
     std_value = float(np.std(squared_values, ddof=0))
-    if np.isclose(mean_value, 0.0):
-        return 0.0 if np.isclose(std_value, 0.0) else math.inf
+    if mean_value == 0.0:
+        return 0.0 if std_value == 0.0 else math.inf
     return float(std_value / mean_value)
 
 
@@ -96,11 +105,11 @@ def squared_distance_cv(values: Sequence[float] | np.ndarray) -> float:
 
 def relative_distance_contrast(values: Sequence[float] | np.ndarray) -> float:
     """Return C(x) = (D_max - D_min) / D_min with safe handling of zero minima."""
-    distances = _as_1d_numeric_array(values, name="Distance values")
+    distances = _distances(values)
     minimum = float(np.min(distances))
     maximum = float(np.max(distances))
-    if np.isclose(minimum, 0.0):
-        return 0.0 if np.isclose(maximum, 0.0) else math.inf
+    if minimum == 0.0:
+        return 0.0 if maximum == 0.0 else math.inf
     return float((maximum - minimum) / minimum)
 
 
@@ -109,12 +118,14 @@ def analyze_distance_to_samples(
     reference_samples: Sequence[Sequence[float]] | np.ndarray,
 ) -> dict[str, float | int | np.ndarray]:
     """Analyze Euclidean distances from a query vector to a set of reference samples."""
-    query = np.asarray(query_vector, dtype=np.float64).ravel()
+    query = _as_1d_numeric_array(query_vector, name="Query vector")
     references = np.asarray(reference_samples, dtype=np.float64)
     if references.size == 0:
         raise ValueError("Reference samples must not be empty.")
     if references.ndim == 1:
         references = references.reshape(1, -1)
+    if references.ndim != 2 or not np.all(np.isfinite(references)):
+        raise ValueError("Reference samples must be a finite 2D array.")
     if query.shape[0] != references.shape[1]:
         raise ValueError(
             f"Query vector dimension {query.shape[0]} does not match reference dimension {references.shape[1]}."
@@ -139,22 +150,19 @@ def analyze_distance_to_samples(
 
 def theoretical_squared_distance_expectation(dimension: int) -> float:
     """Expected squared Euclidean distance under U[0,1]^d coordinates."""
-    if dimension <= 0:
-        raise ValueError("Dimension must be a positive integer.")
+    dimension = positive_integer(dimension, "Dimension")
     return float(dimension / 6.0)
 
 
 def theoretical_squared_distance_variance(dimension: int) -> float:
     """Variance of squared Euclidean distance under U[0,1]^d coordinates."""
-    if dimension <= 0:
-        raise ValueError("Dimension must be a positive integer.")
+    dimension = positive_integer(dimension, "Dimension")
     return float(7.0 * dimension / 180.0)
 
 
 def theoretical_squared_distance_cv(dimension: int) -> float:
     """Coefficient of variation for squared distances under U[0,1]^d coordinates."""
-    if dimension <= 0:
-        raise ValueError("Dimension must be a positive integer.")
+    dimension = positive_integer(dimension, "Dimension")
     return float(math.sqrt(7.0 / (5.0 * dimension)))
 
 
@@ -165,14 +173,12 @@ def validate_squared_distance_theory(
     random_state: int | None = 42,
 ) -> dict[int, dict[str, float]]:
     """Validate empirical squared-distance behavior against theoretical moments."""
-    if samples_per_dimension <= 0:
-        raise ValueError("samples_per_dimension must be positive.")
+    samples_per_dimension = positive_integer(samples_per_dimension, "samples_per_dimension")
 
     rng = np.random.default_rng(random_state)
     summary: dict[int, dict[str, float]] = {}
     for dimension in dimensions:
-        if dimension <= 0:
-            raise ValueError("Each dimension must be a positive integer.")
+        dimension = positive_integer(dimension, "Dimension")
         sample_a = rng.random((samples_per_dimension, int(dimension)))
         sample_b = rng.random((samples_per_dimension, int(dimension)))
         squared_distances = np.sum((sample_a - sample_b) ** 2, axis=1)

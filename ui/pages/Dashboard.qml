@@ -8,8 +8,8 @@ import "../components"
 Item {
     id: page
     objectName: "dashboardPage"
-    property var viewModel
-    property var theme
+    required property var viewModel
+    required property var theme
 
     ScrollView {
         anchors.fill: parent
@@ -42,7 +42,9 @@ Item {
                     Layout.preferredHeight: 112
                     theme: page.theme
                     label: "DATASET"
-                        value: page.viewModel.hasDigitsDataset ? "Digits baseline" : "Unavailable"
+                        value: page.viewModel.datasetLoading ? "Loading..."
+                            : page.viewModel.hasDigitsDataset ? "Digits baseline"
+                            : page.viewModel.datasetError ? "Load failed" : "Not loaded"
                         detail: page.viewModel.hasDigitsDataset
                             ? page.viewModel.datasetSampleCount + " images / " + page.viewModel.datasetClassCount + " classes"
                             : page.viewModel.datasetError
@@ -64,10 +66,10 @@ Item {
                     Layout.preferredHeight: 112
                     theme: page.theme
                     label: "CLASSIFICATION"
-                    value: page.viewModel.hasDigitsDataset
+                    value: page.viewModel.knnEvaluationRunning ? "Evaluating..." : page.viewModel.hasKnnEvaluation
                         ? (page.viewModel.knnTestAccuracy * 100).toFixed(2) + "%"
                         : "Not evaluated"
-                    detail: page.viewModel.hasDigitsDataset
+                    detail: page.viewModel.knnEvaluationError ? page.viewModel.knnEvaluationError : page.viewModel.hasDigitsDataset
                         ? "k = " + page.viewModel.knnK + " / Euclidean distance"
                         : "No nearest-neighbor experiment has run"
                     marker: "#879A8D"
@@ -154,10 +156,10 @@ Item {
                         }
                         Repeater {
                             model: [
-                                { step: "01", name: "Load Digits baseline", state: page.viewModel.hasDigitsDataset ? "READY" : "UNAVAILABLE" },
-                                { step: "02", name: "Extract feature vectors", state: "PENDING" },
-                                { step: "03", name: "Compare distances", state: "PENDING" },
-                                { step: "04", name: "Evaluate neighbors", state: "PENDING" }
+                                { step: "01", name: "Load Digits baseline", state: page.viewModel.datasetLoading ? "LOADING" : page.viewModel.hasDigitsDataset ? "READY" : "NOT LOADED" },
+                                { step: "02", name: "Extract feature vectors", state: page.viewModel.hasDigitsDataset ? "READY" : "PENDING" },
+                                { step: "03", name: "Compare distances", state: page.viewModel.experimentsRunning ? "RUNNING" : page.viewModel.dimensionalityCharts.length > 0 ? "COMPLETE" : "PENDING" },
+                                { step: "04", name: "Evaluate neighbors", state: page.viewModel.knnEvaluationRunning ? "RUNNING" : page.viewModel.hasKnnEvaluation ? "COMPLETE" : "PENDING" }
                             ]
                             delegate: RowLayout {
                                 id: workflowStep
@@ -192,7 +194,7 @@ Item {
                         Text {
                             Layout.fillWidth: true
                                 text: page.viewModel.hasDigitsDataset
-                                    ? page.viewModel.datasetTrainCount + " training / " + page.viewModel.datasetTestCount + " test samples. No experiments have run."
+                                    ? page.viewModel.datasetTrainCount + " training / " + page.viewModel.datasetTestCount + " test samples. " + (page.viewModel.experimentsRunning ? "Experiments running." : page.viewModel.dimensionalityCharts.length > 0 ? "Experiment results are ready." : "Ready to run experiments.")
                                     : page.viewModel.datasetError
                             color: page.theme.muted
                             font.family: "Segoe UI"

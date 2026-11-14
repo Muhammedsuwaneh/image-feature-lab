@@ -1,284 +1,162 @@
+"""Reproducible experiments using the same held-out queries and training references."""
 from __future__ import annotations
 
 from typing import Any
-
 import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
-from app.backend.calculations.distance_metrics import (
-    coefficient_of_variation,
-    distance_standard_deviation,
-    mean_distance,
-    relative_distance_contrast,
-    theoretical_squared_distance_cv,
-    theoretical_squared_distance_expectation,
-    theoretical_squared_distance_variance,
-)
+from app.backend.calculations.distance_metrics import coefficient_of_variation, relative_distance_contrast, validate_squared_distance_theory
+from app.backend.calculations.pairwise import distance_batches
 from app.backend.datasets.digits_dataset import DigitsDataset, load_digits_dataset
-from app.backend.machine_learning.knn_classifier import train_knn_classifier
-
-
-def _safe_relative_contrast(distances: np.ndarray) -> float:
-    distances = np.asarray(distances, dtype=np.float64).ravel()
-    if distances.size == 0:
-        return 0.0
-    minimum = float(np.min(distances))
-    maximum = float(np.max(distances))
-    if np.isclose(minimum, 0.0):
-        return 0.0 if np.isclose(maximum, 0.0) else float("inf")
-    return float((maximum - minimum) / minimum)
+from app.backend.machine_learning.knn_classifier import KNNModel
+from app.backend.validation import feature_matrix, positive_integer
 
 
 def _summarize_distance_distribution(distances: np.ndarray) -> dict[str, Any]:
     distances = np.asarray(distances, dtype=np.float64).ravel()
-    if distances.size == 0:
-        raise ValueError("Distance distribution must not be empty.")
-
-    mean_value = float(np.mean(distances))
-    std_value = float(np.std(distances, ddof=0))
-    cv_value = 0.0 if np.isclose(mean_value, 0.0) else float(std_value / mean_value)
     return {
-        "mean_distance": mean_value,
-        "distance_std": std_value,
-        "coefficient_of_variation": cv_value,
-        "relative_distance_contrast": _safe_relative_contrast(distances),
-        "nearest_distances": np.asarray(np.sort(distances)[: min(10, distances.size)], dtype=np.float64),
-        "farthest_distances": np.asarray(np.sort(distances)[-min(10, distances.size) :], dtype=np.float64),
+        "mean_distance": float(np.mean(distances)),
+        "distance_std": float(np.std(distances, ddof=0)),
+        "distance_variance": float(np.var(distances, ddof=0)),
+        "coefficient_of_variation": coefficient_of_variation(distances),
+        "relative_distance_contrast": relative_distance_contrast(distances),
     }
 
 
-def _pairwise_distance_summary(train_features: np.ndarray, test_features: np.ndarray) -> dict[str, Any]:
-    train_features = np.asarray(train_features, dtype=np.float64)
-    test_features = np.asarray(test_features, dtype=np.float64)
-    if train_features.ndim != 2 or test_features.ndim != 2:
-        raise ValueError("Training and test features must be 2D arrays.")
-    if train_features.shape[1] != test_features.shape[1]:
-        raise ValueError("Training and test feature dimension mismatch.")
+def _evaluate_distance_knn(train_features, train_labels, test_features, test_labels, *, k: int = 5) -> dict[str, Any]:
+    """Measure every test-to-training distance once, without a full distance cube.
 
-    differences = test_features[:, None, :] - train_features[None, :, :]
-    distances = np.linalg.norm(differences, axis=2)
-    nearest_distances = distances.min(axis=1)
-    farthest_distances = distances.max(axis=1)
-    all_distances = distances.ravel()
+    Mean/std/CV describe pooled distances to ALL training references.
+    Relative contrast is the mean of (max-min)/min computed per test query.
+    """
+    model = KNNModel(train_features, train_labels, k=k)
+    queries = feature_matrix(test_features, "Test features")
+    test_labels = np.asarray(test_labels)
+    if len(queries) == 0 or test_labels.ndim != 1 or len(test_labels) != len(queries):
+        raise ValueError("Test features and labels must contain matching, non-empty samples.")
+    nearest, farthest, query_cvs, contrasts, neighbor_indices = [], [], [], [], []
+    count, mean, m2 = 0, 0.0, 0.0
+    for _, distances in distance_batches(model.train_features, queries):
+        batch_count = distances.size
+        batch_mean = float(np.mean(distances))
+        delta = batch_mean - mean
+        total = count + batch_count
+        m2 += float(np.sum((distances - batch_mean) ** 2)) + delta**2 * count * batch_count / total
+        mean += delta * batch_count / total
+        count = total
+        nearest.extend(distances.min(axis=1))
+        farthest.extend(distances.max(axis=1))
+        query_cvs.extend(coefficient_of_variation(row) for row in distances)
+        contrasts.extend(relative_distance_contrast(row) for row in distances)
+        neighbor_indices.append(np.argsort(distances, axis=1, kind="stable")[:, :model.k])
+    predictions = model.predict_from_neighbors(np.concatenate(neighbor_indices))
+    nearest, farthest = np.asarray(nearest), np.asarray(farthest)
+    variance = max(0.0, m2 / count)
+    return {
+        "feature_size": int(queries.shape[1]), "mean_distance": float(mean),
+        "distance_std": float(np.sqrt(variance)), "distance_variance": float(variance),
+        "coefficient_of_variation": float(np.sqrt(variance) / mean) if mean else 0.0,
+        "mean_query_cv": float(np.mean(query_cvs)),
+        "relative_distance_contrast": float(np.mean(contrasts)),
+        "query_relative_contrasts": np.asarray(contrasts),
+        "nearest_distances": nearest, "farthest_distances": farthest,
+        "nearest_distance_summary": _summarize_distance_distribution(nearest),
+        "farthest_distance_summary": _summarize_distance_distribution(farthest),
+        "test_accuracy": float(np.mean(predictions == test_labels)),
+        "predicted_labels": predictions, "actual_labels": test_labels.copy(),
+        "distance_count": int(count), "k": model.k,
+    }
 
-    summary = _summarize_distance_distribution(all_distances)
-    summary["nearest_distances"] = nearest_distances.astype(np.float64)
-    summary["farthest_distances"] = farthest_distances.astype(np.float64)
-    summary["nearest_distance_summary"] = _summarize_distance_distribution(nearest_distances)
-    summary["farthest_distance_summary"] = _summarize_distance_distribution(farthest_distances)
-    return summary
 
-
-def run_synthetic_dimension_experiment(
-    *,
-    dimensions: tuple[int, ...] = (2, 4, 8, 16, 32, 64, 128, 256),
-    samples_per_dimension: int = 2000,
-    seed: int = 42,
-) -> dict[int, dict[str, Any]]:
-    """Generate synthetic random vectors and compare their empirical squared-distance moments to theory."""
-    if samples_per_dimension <= 0:
-        raise ValueError("samples_per_dimension must be positive.")
-
-    rng = np.random.default_rng(seed)
-    results: dict[int, dict[str, Any]] = {}
-    for dimension in dimensions:
-        if dimension <= 0:
-            raise ValueError("Each dimension must be a positive integer.")
-        left = rng.random((samples_per_dimension, int(dimension)))
-        right = rng.random((samples_per_dimension, int(dimension)))
-        squared_distances = np.sum((left - right) ** 2, axis=1)
-        ordinary_distances = np.sqrt(squared_distances)
-
-        mean_sq = float(np.mean(squared_distances))
-        variance_sq = float(np.var(squared_distances, ddof=0))
-        cv_sq = float(np.std(squared_distances, ddof=0) / mean_sq) if not np.isclose(mean_sq, 0.0) else 0.0
-
-        results[int(dimension)] = {
-            "dimension": int(dimension),
-            "mean_squared_distance": mean_sq,
-            "variance_squared_distance": variance_sq,
-            "coefficient_of_variation": cv_sq,
-            "ordinary_distance_cv": float(coefficient_of_variation(ordinary_distances)),
-            "theoretical_mean_squared_distance": theoretical_squared_distance_expectation(int(dimension)),
-            "theoretical_variance_squared_distance": theoretical_squared_distance_variance(int(dimension)),
-            "theoretical_squared_distance_cv": theoretical_squared_distance_cv(int(dimension)),
-            "sample_count": int(samples_per_dimension),
-        }
+def run_synthetic_dimension_experiment(*, dimensions=(2, 4, 8, 16, 32, 64, 128, 256), samples_per_dimension=2000, seed=42):
+    """Validate squared-distance moments for independent Uniform[0,1] pairs."""
+    if not dimensions:
+        raise ValueError("Select at least one synthetic dimension.")
+    results = validate_squared_distance_theory(dimensions=dimensions, samples_per_dimension=samples_per_dimension, random_state=seed)
+    for dimension, stats in results.items():
+        stats.update(dimension=dimension, coefficient_of_variation=stats["squared_distance_cv"], sample_count=samples_per_dimension, seed=seed)
     return results
-
-
-def _evaluate_distance_knn(train_features: np.ndarray, train_labels: np.ndarray, test_features: np.ndarray, test_labels: np.ndarray, *, k: int = 5) -> dict[str, Any]:
-    model = train_knn_classifier(
-        DigitsDataset(
-            images=np.empty((0, 8, 8), dtype=np.uint8),
-            labels=np.array([], dtype=int),
-            feature_vectors=np.empty((0, train_features.shape[1]), dtype=np.float64),
-            classes=tuple(sorted(set(int(v) for v in train_labels))),
-            train_indices=np.array([], dtype=int),
-            test_indices=np.array([], dtype=int),
-        ),
-        k=k,
-    )
-    model.train_features = train_features
-    model.train_labels = train_labels
-
-    predictions = model.predict(test_features)
-    distances, _ = model.kneighbors(test_features, n_neighbors=k, return_distance=True)
-    distance_distribution = distances.ravel()
-
-    summary = _pairwise_distance_summary(train_features, test_features)
-    summary["test_accuracy"] = float(np.mean(predictions == test_labels.astype(int)))
-    summary["predicted_labels"] = predictions.astype(int)
-    summary["actual_labels"] = test_labels.astype(int)
-    summary["nearest_distances"] = np.asarray(summary["nearest_distances"], dtype=np.float64)
-    summary["farthest_distances"] = np.asarray(summary["farthest_distances"], dtype=np.float64)
-    summary["all_pairwise_distances"] = np.asarray(distance_distribution, dtype=np.float64)
-    summary["mean_distance"] = mean_distance(summary["all_pairwise_distances"])
-    summary["distance_std"] = distance_standard_deviation(summary["all_pairwise_distances"])
-    summary["coefficient_of_variation"] = coefficient_of_variation(summary["all_pairwise_distances"])
-    summary["relative_distance_contrast"] = relative_distance_contrast(summary["all_pairwise_distances"])
-    summary["k"] = int(k)
-    return summary
 
 
 def _build_augmented_features(data: np.ndarray, *, target_dimension: int, seed: int) -> np.ndarray:
+    target_dimension = positive_integer(target_dimension, "target_dimension")
+    if target_dimension < data.shape[1]:
+        raise ValueError("target_dimension must preserve all original features.")
     rng = np.random.default_rng(seed)
-    if target_dimension <= data.shape[1]:
-        return data.copy()
-    noise = rng.uniform(0.0, 16.0, size=(data.shape[0], target_dimension - data.shape[1]))
+    noise = rng.uniform(0.0, 16.0, size=(len(data), target_dimension - data.shape[1]))
     return np.concatenate([data, noise], axis=1)
 
 
-def run_irrelevant_feature_experiment(
-    *,
-    feature_sizes: tuple[int, ...] = (64, 96, 160, 256),
-    seeds: tuple[int, ...] = (0, 1, 2),
-    k: int = 5,
-) -> dict[int, dict[str, Any]]:
-    """Append irrelevant features to the Digits dataset and evaluate how dimensionality changes the distance profile and k-NN performance."""
-    dataset = load_digits_dataset()
-    results: dict[int, dict[str, Any]] = {}
-
+def run_irrelevant_feature_experiment(*, dataset=None, feature_sizes=(64, 96, 160, 256), seeds=(0, 1, 2), k=5):
+    """Append Uniform[0,16] features and retain every seed's measurements."""
+    if not feature_sizes or not seeds:
+        raise ValueError("At least one feature size and one seed are required.")
+    dataset = load_digits_dataset() if dataset is None else dataset
+    results = {}
     for feature_size in feature_sizes:
-        if feature_size < 64:
-            raise ValueError("feature_size must be at least 64 to preserve the original Digits features.")
-
         condition_metrics = []
         for seed in seeds:
-            rng = np.random.default_rng(seed)
             augmented = _build_augmented_features(dataset.feature_vectors, target_dimension=feature_size, seed=seed)
-            x_train = augmented[dataset.train_indices]
-            x_test = augmented[dataset.test_indices]
-            y_train = dataset.labels[dataset.train_indices]
-            y_test = dataset.labels[dataset.test_indices]
-
-            model = train_knn_classifier(
-                DigitsDataset(
-                    images=np.empty((0, 8, 8), dtype=np.uint8),
-                    labels=np.array([], dtype=int),
-                    feature_vectors=np.empty((0, x_train.shape[1]), dtype=np.float64),
-                    classes=tuple(sorted(set(int(v) for v in y_train))),
-                    train_indices=np.array([], dtype=int),
-                    test_indices=np.array([], dtype=int),
-                ),
-                k=k,
+            summary = _evaluate_distance_knn(
+                augmented[dataset.train_indices], dataset.labels[dataset.train_indices],
+                augmented[dataset.test_indices], dataset.labels[dataset.test_indices], k=k,
             )
-            model.train_features = x_train
-            model.train_labels = y_train
-            predictions = model.predict(x_test)
-            distances, _ = model.kneighbors(x_test, n_neighbors=k, return_distance=True)
-
-            summary = _pairwise_distance_summary(x_train, x_test)
-            summary["test_accuracy"] = float(np.mean(predictions == y_test.astype(int)))
             summary["seed"] = int(seed)
-            summary["feature_size"] = int(feature_size)
-            summary["all_pairwise_distances"] = np.asarray(distances.ravel(), dtype=np.float64)
-            summary["mean_distance"] = mean_distance(summary["all_pairwise_distances"])
-            summary["distance_std"] = distance_standard_deviation(summary["all_pairwise_distances"])
-            summary["coefficient_of_variation"] = coefficient_of_variation(summary["all_pairwise_distances"])
-            summary["relative_distance_contrast"] = relative_distance_contrast(summary["all_pairwise_distances"])
-            summary["nearest_distances"] = np.asarray(summary["nearest_distances"], dtype=np.float64)
-            summary["farthest_distances"] = np.asarray(summary["farthest_distances"], dtype=np.float64)
             condition_metrics.append(summary)
-
-        aggregate = {
-            "feature_size": int(feature_size),
-            "seeds": tuple(int(value) for value in seeds),
-            "mean_distance": float(np.mean([item["mean_distance"] for item in condition_metrics])),
-            "distance_std": float(np.mean([item["distance_std"] for item in condition_metrics])),
-            "coefficient_of_variation": float(np.mean([item["coefficient_of_variation"] for item in condition_metrics])),
-            "relative_distance_contrast": float(np.mean([item["relative_distance_contrast"] for item in condition_metrics])),
+        scalar_metrics = ("mean_distance", "distance_std", "distance_variance", "coefficient_of_variation", "mean_query_cv", "relative_distance_contrast", "test_accuracy")
+        aggregate = {key: float(np.mean([item[key] for item in condition_metrics])) for key in scalar_metrics}
+        aggregate.update({
+            "feature_size": int(feature_size), "k": int(k), "seeds": tuple(int(seed) for seed in seeds),
+            "test_accuracy_std": float(np.std([item["test_accuracy"] for item in condition_metrics])),
             "nearest_distances": np.concatenate([item["nearest_distances"] for item in condition_metrics]),
             "farthest_distances": np.concatenate([item["farthest_distances"] for item in condition_metrics]),
-            "test_accuracy": float(np.mean([item["test_accuracy"] for item in condition_metrics])),
             "seed_results": condition_metrics,
-        }
+        })
         results[int(feature_size)] = aggregate
-
     return results
 
 
-def run_standardization_pca_experiment(
-    *,
-    dataset: DigitsDataset | None = None,
-    random_state: int = 42,
-    k: int = 5,
-) -> dict[str, dict[str, Any]]:
-    """Compare original, standardized, and PCA-reduced feature spaces while preventing leakage with train-only fitting."""
-    if dataset is None:
-        dataset = load_digits_dataset()
-
-    x_train = dataset.feature_vectors[dataset.train_indices]
-    y_train = dataset.labels[dataset.train_indices]
-    x_test = dataset.feature_vectors[dataset.test_indices]
-    y_test = dataset.labels[dataset.test_indices]
-
-    results: dict[str, dict[str, Any]] = {}
-    preprocessors = {
-        "original_64": (x_train.copy(), x_test.copy()),
-        "standardized": (
-            StandardScaler().fit_transform(x_train),
-            StandardScaler().fit(x_train).transform(x_test),
-        ),
-        "pca_16": (
-            PCA(n_components=16, random_state=random_state).fit_transform(x_train),
-            PCA(n_components=16, random_state=random_state).fit(x_train).transform(x_test),
-        ),
-        "pca_32": (
-            PCA(n_components=32, random_state=random_state).fit_transform(x_train),
-            PCA(n_components=32, random_state=random_state).fit(x_train).transform(x_test),
-        ),
+def run_standardization_pca_experiment(*, dataset=None, random_state=42, k=5):
+    """Fit each transformer ONCE on training data and reuse it for held-out data."""
+    dataset = load_digits_dataset() if dataset is None else dataset
+    x_train, x_test = dataset.feature_vectors[dataset.train_indices], dataset.feature_vectors[dataset.test_indices]
+    y_train, y_test = dataset.labels[dataset.train_indices], dataset.labels[dataset.test_indices]
+    transformers = {
+        "original_64": None, "standardized": StandardScaler(),
+        "pca_16": PCA(n_components=16, svd_solver="full", random_state=random_state),
+        "pca_32": PCA(n_components=32, svd_solver="full", random_state=random_state),
     }
-
-    for name, (train_data, test_data) in preprocessors.items():
-        model = train_knn_classifier(
-            DigitsDataset(
-                images=np.empty((0, 8, 8), dtype=np.uint8),
-                labels=np.array([], dtype=int),
-                feature_vectors=np.empty((0, train_data.shape[1]), dtype=np.float64),
-                classes=tuple(sorted(set(int(v) for v in y_train))),
-                train_indices=np.array([], dtype=int),
-                test_indices=np.array([], dtype=int),
-            ),
-            k=k,
-        )
-        model.train_features = train_data
-        model.train_labels = y_train
-        predictions = model.predict(test_data)
-        summary = _pairwise_distance_summary(train_data, test_data)
-        summary["test_accuracy"] = float(np.mean(predictions == y_test.astype(int)))
+    results = {}
+    for name, transformer in transformers.items():
+        if transformer is None:
+            train_data, test_data = x_train, x_test
+        else:
+            transformer.fit(x_train)
+            train_data, test_data = transformer.transform(x_train), transformer.transform(x_test)
+        summary = _evaluate_distance_knn(train_data, y_train, test_data, y_test, k=k)
         summary["name"] = name
-        summary["k"] = int(k)
+        if isinstance(transformer, PCA):
+            summary["explained_variance_ratio"] = transformer.explained_variance_ratio_.copy()
         results[name] = summary
-
     return results
 
 
-def run_all_dimensionality_experiments() -> dict[str, Any]:
-    """Run the full experimental suite and return the synthetic, irrelevant-feature, and PCA comparisons."""
+def run_all_dimensionality_experiments(*, dataset: DigitsDataset | None = None) -> dict[str, Any]:
+    """Run all conditions against precisely the same dataset and split."""
+    dataset = load_digits_dataset() if dataset is None else dataset
     return {
+        "metadata": {
+            "dataset": "sklearn.datasets.load_digits", "sample_count": len(dataset),
+            "train_indices": dataset.train_indices.copy(), "test_indices": dataset.test_indices.copy(),
+            "split_seed": dataset.split_random_state, "test_size": dataset.test_size,
+            "k": 5, "metric": "euclidean", "synthetic_seed": 42, "noise_seeds": [0, 1, 2],
+            "synthetic_pairs_per_dimension": 2000, "pca_solver": "full",
+            "distance_statistics": "All held-out-query to training-reference distances; population variance.",
+            "relative_contrast": "Mean over queries of (farthest - nearest) / nearest; positive/zero is infinity.",
+            "seed_aggregation": "Arithmetic means of per-seed scalar metrics; population std of accuracy.",
+        },
         "synthetic": run_synthetic_dimension_experiment(),
-        "irrelevant_features": run_irrelevant_feature_experiment(),
-        "standardization_and_pca": run_standardization_pca_experiment(),
+        "irrelevant_features": run_irrelevant_feature_experiment(dataset=dataset),
+        "standardization_and_pca": run_standardization_pca_experiment(dataset=dataset),
     }

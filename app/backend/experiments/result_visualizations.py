@@ -2,17 +2,28 @@ from __future__ import annotations
 
 import base64
 from io import BytesIO
+from threading import RLock
 from typing import Any, Callable
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.figure import Figure
+
+
+_render_lock = RLock()
 
 
 def _render_chart(draw: Callable[[Axes], None]) -> str:
-    figure, axes = plt.subplots(figsize=(7.2, 3.2), dpi=120)
+    # Matplotlib's font caches are shared even when using independent figures.
+    with _render_lock:
+        return _render_chart_locked(draw)
+
+
+def _render_chart_locked(draw: Callable[[Axes], None]) -> str:
+    figure = Figure(figsize=(7.2, 3.2), dpi=120)
+    FigureCanvasAgg(figure)
+    axes = figure.subplots()
     figure.patch.set_facecolor("#F7F9F7")
     axes.set_facecolor("#F7F9F7")
     draw(axes)
@@ -27,7 +38,6 @@ def _render_chart(draw: Callable[[Axes], None]) -> str:
     axes.yaxis.label.set_color("#34453B")
     buffer = BytesIO()
     figure.savefig(buffer, format="png", facecolor=figure.get_facecolor(), bbox_inches="tight")
-    plt.close(figure)
     encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
     return f"data:image/png;base64,{encoded}"
 
@@ -41,6 +51,11 @@ def _condition_data(results: dict[str, Any]) -> list[dict[str, Any]]:
             "nearest_distances": np.asarray(metrics["nearest_distances"], dtype=np.float64),
             "farthest_distances": np.asarray(metrics["farthest_distances"], dtype=np.float64),
             "test_accuracy": float(metrics["test_accuracy"]),
+            "mean_distance": float(metrics["mean_distance"]),
+            "distance_std": float(metrics["distance_std"]),
+            "coefficient_of_variation": float(metrics["coefficient_of_variation"]),
+            "relative_contrast": float(metrics["relative_distance_contrast"]),
+            "test_accuracy_std": float(metrics.get("test_accuracy_std", 0.0)),
         })
 
     feature_counts = {"original_64": 64, "standardized": 64, "pca_16": 16, "pca_32": 32}
@@ -52,24 +67,13 @@ def _condition_data(results: dict[str, Any]) -> list[dict[str, Any]]:
             "nearest_distances": np.asarray(metrics["nearest_distances"], dtype=np.float64),
             "farthest_distances": np.asarray(metrics["farthest_distances"], dtype=np.float64),
             "test_accuracy": float(metrics["test_accuracy"]),
+            "mean_distance": float(metrics["mean_distance"]),
+            "distance_std": float(metrics["distance_std"]),
+            "coefficient_of_variation": float(metrics["coefficient_of_variation"]),
+            "relative_contrast": float(metrics["relative_distance_contrast"]),
+            "test_accuracy_std": 0.0,
         })
 
-    for row in rows:
-        nearest = row["nearest_distances"]
-        farthest = row["farthest_distances"]
-        mean_nearest = float(np.mean(nearest))
-        mean_farthest = float(np.mean(farthest))
-        row["mean_distance"] = mean_nearest
-        row["coefficient_of_variation"] = (
-            float(np.std(nearest, ddof=0) / mean_nearest)
-            if not np.isclose(mean_nearest, 0.0)
-            else 0.0
-        )
-        row["relative_contrast"] = (
-            float((mean_farthest - mean_nearest) / mean_nearest)
-            if not np.isclose(mean_nearest, 0.0)
-            else float("inf")
-        )
     return rows
 
 
@@ -103,9 +107,9 @@ def build_result_visualizations(results: dict[str, Any]) -> dict[str, Any]:
     def draw_dimension_comparison(axes: Axes) -> None:
         mean_distances = [item["mean_distance"] for item in dimension_rows]
         accuracies = [item["test_accuracy"] * 100.0 for item in dimension_rows]
-        axes.plot(dimensions, mean_distances, color="#247A57", marker="o", linewidth=2, label="Mean nearest distance")
+        axes.plot(dimensions, mean_distances, color="#247A57", marker="o", linewidth=2, label="Mean distance to all references")
         axes.set_xlabel("Feature count")
-        axes.set_ylabel("Mean nearest distance")
+        axes.set_ylabel("Mean Euclidean distance")
         accuracy_axes = axes.twinx()
         accuracy_axes.plot(dimensions, accuracies, color="#C56A3D", marker="s", linewidth=1.8, label="Test accuracy")
         accuracy_axes.set_ylabel("Test accuracy (%)", color="#C56A3D")
@@ -115,37 +119,42 @@ def build_result_visualizations(results: dict[str, Any]) -> dict[str, Any]:
         accuracy_lines, accuracy_labels = accuracy_axes.get_legend_handles_labels()
         axes.legend(lines + accuracy_lines, labels + accuracy_labels, frameon=False, fontsize=8, loc="best")
 
-    add_chart("Dimensionality comparison", "Mean nearest-neighbor distance and test accuracy across augmented feature spaces.", draw_dimension_comparison)
+    add_chart("Dimensionality comparison", "Mean test-to-training distance and test accuracy across augmented feature spaces.", draw_dimension_comparison)
 
     def draw_concentration(axes: Axes) -> None:
         cvs = [item["coefficient_of_variation"] for item in dimension_rows]
         axes.plot(dimensions, cvs, color="#247A57", marker="o", linewidth=2)
         axes.set_xlabel("Feature count")
-        axes.set_ylabel("Nearest-distance coefficient of variation")
+        axes.set_ylabel("All-distance coefficient of variation")
         axes.set_xticks(dimensions)
 
-    add_chart("Distance concentration", "Measured nearest-distance coefficient of variation across feature dimensions.", draw_concentration)
+    add_chart("Distance concentration", "Population CV of all test-to-training distances; scalar metrics averaged over noise seeds.", draw_concentration)
 
     def draw_relative_contrast(axes: Axes) -> None:
         labels = [item["label"] for item in conditions]
         values = [item["relative_contrast"] for item in conditions]
         positions = np.arange(len(labels))
-        axes.bar(positions, values, color=["#247A57" if "PCA" not in label else "#C56A3D" for label in labels])
+        finite_values = [value if np.isfinite(value) else 0.0 for value in values]
+        axes.bar(positions, finite_values, color=["#247A57" if "PCA" not in label else "#C56A3D" for label in labels])
+        for position, value in zip(positions, values):
+            if not np.isfinite(value):
+                axes.text(position, 0, "infinity", rotation=90, ha="center", va="bottom", fontsize=8)
         axes.set_xticks(positions, labels, rotation=28, ha="right")
         axes.set_ylabel("Relative nearest/farthest contrast")
 
-    add_chart("Relative distance contrast", "(Mean farthest distance - mean nearest distance) / mean nearest distance.", draw_relative_contrast)
+    add_chart("Relative distance contrast", "Mean per-query (farthest - nearest) / nearest; exact zero minima can give infinity.", draw_relative_contrast)
 
     def draw_accuracy(axes: Axes) -> None:
         labels = [item["label"] for item in conditions]
         values = [item["test_accuracy"] * 100.0 for item in conditions]
         positions = np.arange(len(labels))
-        axes.bar(positions, values, color="#247A57")
+        errors = [item["test_accuracy_std"] * 100.0 for item in conditions]
+        axes.bar(positions, values, yerr=errors, capsize=3, color="#247A57")
         axes.set_xticks(positions, labels, rotation=28, ha="right")
         axes.set_ylabel("Test accuracy (%)")
         axes.set_ylim(0, 100)
 
-    add_chart("Classification performance", "Euclidean k-NN test accuracy across original, augmented, standardized, and PCA features.", draw_accuracy)
+    add_chart("Classification performance", "Held-out k-NN accuracy; error bars show population std over noise seeds, not confidence intervals.", draw_accuracy)
 
     def draw_distributions(axes: Axes) -> None:
         selected = [item for item in conditions if item["label"] in {"Original", "Irrelevant 256", "Standardized", "PCA 16", "PCA 32"}]

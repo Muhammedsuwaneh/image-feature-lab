@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from app.backend.calculations import (
     analyze_distance_to_samples,
@@ -11,6 +12,7 @@ from app.backend.calculations import (
     squared_distance_coefficient_of_variation,
     squared_euclidean_distance,
     validate_squared_distance_theory,
+    theoretical_squared_distance_cv,
 )
 
 
@@ -73,3 +75,39 @@ def test_squared_distance_cv_is_not_the_same_as_ordinary_cv():
         squared_distance_coefficient_of_variation(values),
         coefficient_of_variation(values),
     )
+
+
+@pytest.mark.parametrize("metric", [mean_distance, distance_variance, distance_standard_deviation, coefficient_of_variation, relative_distance_contrast, squared_distance_coefficient_of_variation])
+@pytest.mark.parametrize("values", [[], [np.nan], [np.inf], [-1.0, 2.0]])
+def test_distance_statistics_reject_invalid_values(metric, values):
+    with pytest.raises(ValueError):
+        metric(values)
+
+
+def test_small_nonzero_distances_are_not_treated_as_zero():
+    values = np.array([1e-12, 3e-12])
+    assert coefficient_of_variation(values) == pytest.approx(0.5)
+    assert relative_distance_contrast(values) == pytest.approx(2.0)
+    assert squared_distance_coefficient_of_variation(values) == pytest.approx(0.8)
+    assert coefficient_of_variation([0, 0]) == 0
+    assert relative_distance_contrast([0, 0]) == 0
+
+
+@pytest.mark.parametrize("dimension", [0, -1, 1.5, True])
+def test_theory_rejects_invalid_dimensions(dimension):
+    with pytest.raises(ValueError):
+        theoretical_squared_distance_cv(dimension)
+
+
+@pytest.mark.parametrize("values", [[], [np.nan], [np.inf]])
+def test_vector_distances_reject_empty_or_nonfinite_inputs(values):
+    with pytest.raises(ValueError):
+        euclidean_distance(values, values)
+    with pytest.raises(ValueError):
+        squared_euclidean_distance(values, values)
+
+
+def test_query_analysis_rejects_invalid_shapes_and_nonfinite_data():
+    for query, references in [([0, 1], [[[1, 2]]]), ([0, np.nan], [[0, 1]]), ([0, 1], [[np.inf, 0]]), ([0, 1], [[0]])]:
+        with pytest.raises(ValueError):
+            analyze_distance_to_samples(query, references)

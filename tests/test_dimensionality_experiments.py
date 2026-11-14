@@ -1,6 +1,10 @@
 import base64
 
 import numpy as np
+import pytest
+
+from app.backend.datasets.digits_dataset import load_digits_dataset
+from app.backend.experiments import dimensionality_experiments as experiments
 
 from app.backend.experiments.dimensionality_experiments import (
     run_irrelevant_feature_experiment,
@@ -73,7 +77,80 @@ def test_result_visualizations_use_real_experiment_outputs():
         rows["Irrelevant 96"]["test_accuracy"],
         experiment_results["irrelevant_features"][96]["test_accuracy"],
     )
+    for label, metrics in [("Irrelevant 96", experiment_results["irrelevant_features"][96]), ("PCA 16", experiment_results["standardization_and_pca"]["pca_16"])]:
+        for key in ("mean_distance", "distance_std", "coefficient_of_variation"):
+            assert rows[label][key] == pytest.approx(metrics[key])
+        assert rows[label]["relative_contrast"] == pytest.approx(metrics["relative_distance_contrast"])
     assert all(
         base64.b64decode(chart["source"].split(",", 1)[1]).startswith(b"\x89PNG\r\n\x1a\n")
         for chart in charts
     )
+
+
+def test_experiment_statistics_use_every_training_reference():
+    training = np.array([[0, 0], [3, 0], [0, 4], [30, 40]], dtype=float)
+    queries = np.array([[1, 1], [2, 2], [4, 2]], dtype=float)
+    distances = np.linalg.norm(queries[:, None, :] - training[None, :, :], axis=2)
+    result = experiments._evaluate_distance_knn(training, np.array([0, 1, 1, 0]), queries, np.array([0, 1, 1]), k=2)
+    assert result["distance_count"] == 12
+    assert result["mean_distance"] == pytest.approx(distances.mean())
+    assert result["distance_variance"] == pytest.approx(distances.var())
+    assert result["distance_std"] == pytest.approx(distances.std())
+    assert result["coefficient_of_variation"] == pytest.approx(distances.std() / distances.mean())
+    query_contrasts = (distances.max(axis=1) - distances.min(axis=1)) / distances.min(axis=1)
+    assert result["relative_distance_contrast"] == pytest.approx(query_contrasts.mean())
+    np.testing.assert_allclose(result["nearest_distances"], distances.min(axis=1))
+    np.testing.assert_allclose(result["farthest_distances"], distances.max(axis=1))
+
+
+def test_preprocessors_fit_once_and_only_on_training_samples(monkeypatch):
+    dataset = load_digits_dataset(test_size=0.25, random_state=7)
+    expected_training = dataset.feature_vectors[dataset.train_indices]
+    expected_test = dataset.feature_vectors[dataset.test_indices]
+    fitted_ids, transformed_ids = [], []
+    for transformer_type in (experiments.StandardScaler, experiments.PCA):
+        original_fit, original_transform = transformer_type.fit, transformer_type.transform
+
+        def fit(self, values, *args, _original=original_fit, **kwargs):
+            np.testing.assert_array_equal(values, expected_training)
+            fitted_ids.append(id(self))
+            return _original(self, values, *args, **kwargs)
+
+        def transform(self, values, *args, _original=original_transform, **kwargs):
+            assert id(self) in fitted_ids
+            assert np.array_equal(values, expected_training) or np.array_equal(values, expected_test)
+            transformed_ids.append(id(self))
+            return _original(self, values, *args, **kwargs)
+
+        monkeypatch.setattr(transformer_type, "fit", fit)
+        monkeypatch.setattr(transformer_type, "transform", transform)
+    results = run_standardization_pca_experiment(dataset=dataset)
+    assert len(fitted_ids) == len(set(fitted_ids)) == 3
+    assert all(transformed_ids.count(identity) == 2 for identity in fitted_ids)
+    assert all(len(row["actual_labels"]) == len(dataset.test_indices) for row in results.values())
+
+
+def test_augmentation_preserves_features_and_is_reproducible():
+    data = load_digits_dataset().feature_vectors
+    first = experiments._build_augmented_features(data, target_dimension=96, seed=0)
+    second = experiments._build_augmented_features(data, target_dimension=96, seed=0)
+    different = experiments._build_augmented_features(data, target_dimension=96, seed=1)
+    np.testing.assert_array_equal(first[:, :64], data)
+    np.testing.assert_array_equal(first, second)
+    assert not np.array_equal(first[:, 64:], different[:, 64:])
+    assert np.all((first[:, 64:] >= 0) & (first[:, 64:] <= 16))
+
+
+@pytest.mark.parametrize("kwargs", [{"seeds": ()}, {"feature_sizes": ()}, {"feature_sizes": (63,)}, {"feature_sizes": (64.5,)}])
+def test_irrelevant_experiment_rejects_invalid_conditions(kwargs):
+    with pytest.raises(ValueError):
+        run_irrelevant_feature_experiment(**kwargs)
+
+
+def test_seed_aggregation_preserves_actual_metrics():
+    result = run_irrelevant_feature_experiment(feature_sizes=(64, 96), seeds=(0, 1))
+    for metrics in result.values():
+        for key in ("mean_distance", "coefficient_of_variation", "relative_distance_contrast", "test_accuracy"):
+            assert metrics[key] == pytest.approx(np.mean([seed[key] for seed in metrics["seed_results"]]))
+        assert metrics["test_accuracy_std"] == pytest.approx(np.std([seed["test_accuracy"] for seed in metrics["seed_results"]]))
+    np.testing.assert_array_equal(result[64]["seed_results"][0]["predicted_labels"], result[64]["seed_results"][1]["predicted_labels"])

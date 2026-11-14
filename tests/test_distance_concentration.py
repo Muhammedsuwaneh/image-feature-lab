@@ -1,13 +1,17 @@
 import base64
 import math
 
+from app.backend.datasets.digits_dataset import load_digits_dataset
 from app.viewmodels.feature_lab_view_model import FeatureLabViewModel
 
 
-def test_distance_concentration_uses_held_out_query_and_training_references():
+def test_distance_concentration_uses_held_out_query_and_training_references(wait_until):
     view_model = FeatureLabViewModel()
+    view_model._on_dataset_loaded(load_digits_dataset(), 0.0, "")
 
     view_model.analyzeDistanceConcentration(0)
+    wait_until(lambda: not view_model.distanceAnalysisRunning)
+    view_model.shutdown()
 
     result = view_model.distanceConcentrationResult
     assert result["reference_count"] == view_model.datasetTrainCount
@@ -26,6 +30,7 @@ def test_distance_concentration_uses_held_out_query_and_training_references():
 
 def test_distance_concentration_reports_invalid_test_selection():
     view_model = FeatureLabViewModel()
+    view_model._on_dataset_loaded(load_digits_dataset(), 0.0, "")
 
     view_model.analyzeDistanceConcentration(view_model.datasetTestCount)
 

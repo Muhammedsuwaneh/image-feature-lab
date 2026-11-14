@@ -7,8 +7,8 @@ import "../components"
 Item {
     id: page
     objectName: "imageAnalysisPage"
-    property var viewModel
-    property var theme
+    required property var viewModel
+    required property var theme
 
     FileDialog {
         id: imagePicker
@@ -108,6 +108,7 @@ Item {
                                     clip: true
                                     Image {
                                         id: originalImagePreview
+                                        objectName: "originalImagePreview"
                                         anchors.fill: parent
                                         anchors.margins: 10
                                         source: page.viewModel.selectedImageUrl
@@ -148,6 +149,7 @@ Item {
                                     clip: true
                                     Image {
                                         id: processedImagePreview
+                                        objectName: "processedImagePreview"
                                         anchors.fill: parent
                                         anchors.margins: 10
                                         source: page.viewModel.processedImageUrl
@@ -248,7 +250,7 @@ Item {
                                    ? page.viewModel.featureVectorLength + "-dimensional feature vector"
                                    : "No feature vector"
                                 detail: page.viewModel.hasProcessedImage
-                                    ? "Grayscale intensities are scaled to the Digits range of 0-16."
+                                    ? page.viewModel.preprocessingSummary
                                     : "A vector is produced after a supported image is selected."
                         }
 
@@ -271,6 +273,96 @@ Item {
                             }
                             background: Rectangle { radius: 4; color: "#F1F3EE"; border.color: page.theme.line }
                         }
+                    }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: predictionColumn.implicitHeight + 40
+                radius: 6
+                color: page.theme.surface
+                border.color: page.theme.line
+
+                ColumnLayout {
+                    id: predictionColumn
+                    anchors.fill: parent
+                    anchors.margins: 20
+                    spacing: 12
+                    Text {
+                        Layout.fillWidth: true
+                        text: "EXPERIMENTAL k-NN / k = " + page.viewModel.knnK
+                        color: page.theme.green
+                        font.family: "Bahnschrift"
+                        font.pixelSize: 11
+                        font.weight: Font.Bold
+                    }
+                    Text {
+                        objectName: "predictionText"
+                        Layout.fillWidth: true
+                        text: page.viewModel.knnPredictionError ? page.viewModel.knnPredictionError
+                            : page.viewModel.datasetLoading ? "Loading the reference dataset..."
+                            : !page.viewModel.hasDigitsDataset ? "Reference dataset unavailable: " + page.viewModel.datasetError
+                            : page.viewModel.hasKnnPrediction ? "Predicted digit: " + page.viewModel.knnPredictedLabel
+                            : "Choose an image to compare with the training samples."
+                        color: page.theme.ink
+                        font.pixelSize: 17
+                        wrapMode: Text.WordWrap
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        text: page.viewModel.knnEvaluationRunning ? "Evaluating the held-out baseline... You can already classify images and run experiments."
+                            : page.viewModel.knnEvaluationError ? "Baseline evaluation failed: " + page.viewModel.knnEvaluationError
+                            : page.viewModel.hasKnnEvaluation
+                            ? "Held-out baseline accuracy: " + (page.viewModel.knnTestAccuracy * 100).toFixed(2) + "% | Uploads are normalized for stroke polarity, margins and placement. This is a research classifier."
+                            : "The reference images contain 8 x 8 grayscale digit samples."
+                        color: page.theme.muted
+                        font.pixelSize: 11
+                        wrapMode: Text.WordWrap
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 16
+                        Repeater {
+                            model: page.viewModel.knnNeighbors
+                            ColumnLayout {
+                                id: neighbor
+                                required property var modelData
+                                Layout.fillWidth: true
+                                Image {
+                                    objectName: "neighborImagePreview"
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 100
+                                    source: neighbor.modelData.source
+                                    fillMode: Image.PreserveAspectFit
+                                    smooth: false
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: "Digit " + neighbor.modelData.label + " | sample " + neighbor.modelData.index
+                                    color: page.theme.ink
+                                    font.pixelSize: 11
+                                    horizontalAlignment: Text.AlignHCenter
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: "Distance " + Number(neighbor.modelData.distance).toFixed(3)
+                                    color: page.theme.muted
+                                    font.pixelSize: 10
+                                    horizontalAlignment: Text.AlignHCenter
+                                }
+                            }
+                        }
+                    }
+                    TextArea {
+                        Layout.fillWidth: true
+                        visible: page.viewModel.hasProcessedImage
+                        text: "64 image features: [" + page.viewModel.featureVector.join(", ") + "]"
+                        readOnly: true
+                        wrapMode: TextEdit.WordWrap
+                        color: page.theme.ink
+                        font.family: "Consolas"
+                        font.pixelSize: 10
                     }
                 }
             }

@@ -8,8 +8,8 @@ import "../components"
 Item {
     id: page
     objectName: "distanceConcentrationPage"
-    property var viewModel
-    property var theme
+    required property var viewModel
+    required property var theme
 
     ScrollView {
         anchors.fill: parent
@@ -86,8 +86,8 @@ Item {
                             }
                             Button {
                                 id: analyzeButton
-                                text: "Analyze distances"
-                                enabled: page.viewModel.hasDigitsDataset
+                                text: page.viewModel.distanceAnalysisRunning ? "Analyzing..." : "Analyze distances"
+                                enabled: page.viewModel.hasDigitsDataset && !page.viewModel.distanceAnalysisRunning
                                 onClicked: page.viewModel.analyzeDistanceConcentration(queryPosition.value - 1)
                                 contentItem: Text {
                                     text: analyzeButton.text
