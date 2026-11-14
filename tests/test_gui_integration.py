@@ -5,8 +5,8 @@ import cv2
 import numpy as np
 import pytest
 from PyQt6 import sip
-from PyQt6.QtCore import QObject, QTimer, QUrl, qInstallMessageHandler
-from PyQt6.QtGui import QFontDatabase, QRawFont
+from PyQt6.QtCore import QObject, QTimer, QUrl, Qt, QMetaObject, qInstallMessageHandler
+from PyQt6.QtGui import QFontDatabase, QRawFont, QWindow
 from PyQt6.QtQml import QQmlApplicationEngine, QQmlExpression
 from PyQt6.QtQuick import QQuickWindow
 
@@ -47,6 +47,31 @@ def visual_items(item, name):
     for child in item.childItems():
         found.extend(visual_items(child, name))
     return found
+
+
+def test_maximized_window_preserves_work_area_and_custom_close_control(window, wait_until, tmp_path):
+    root, _, _, messages = window
+    wait_until(lambda: root.visibility() == QWindow.Visibility.Maximized)
+    assert root.screen().availableGeometry().contains(root.geometry())
+    assert root.flags() & Qt.WindowType.FramelessWindowHint
+    assert not root.flags() & Qt.WindowType.WindowMinimizeButtonHint
+    assert not root.flags() & Qt.WindowType.WindowMaximizeButtonHint
+    assert root.findChild(QObject, "customTitleBar") is not None
+    close_button = root.findChild(QObject, "closeWindowButton")
+    assert close_button is not None
+    assert close_button.property("visible")
+    root.showNormal()
+    wait_until(lambda: root.visibility() == QWindow.Visibility.Maximized)
+    root.showMinimized()
+    wait_until(lambda: root.visibility() == QWindow.Visibility.Maximized)
+    root.showFullScreen()
+    wait_until(lambda: root.visibility() == QWindow.Visibility.Maximized)
+    assert root.screen().availableGeometry().contains(root.geometry())
+    wait_until(lambda: not root.grabWindow().isNull())
+    assert root.grabWindow().save(str(tmp_path / "maximized-window.png"))
+    QMetaObject.invokeMethod(close_button, "clicked")
+    wait_until(lambda: not root.isVisible())
+    assert_no_qml_errors(messages)
 
 
 def test_qml_navigation_after_scikit_learn_initialization(window, wait_until):

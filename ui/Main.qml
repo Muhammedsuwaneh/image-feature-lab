@@ -6,13 +6,24 @@ import "components"
 ApplicationWindow {
     id: mainWindow
     required property var viewModel
-    width: 1440
-    height: 920
-    minimumWidth: 1120
-    minimumHeight: 720
     visible: true
-    title: qsTr("FeatureLab | Distance Concentration")
+    visibility: Window.Maximized
+    flags: Qt.Window | Qt.FramelessWindowHint | Qt.CustomizeWindowHint | Qt.WindowCloseButtonHint
+    title: qsTr("FeatureLab")
     color: theme.canvas
+
+    // Maximized windows use the desktop work area, leaving the taskbar visible.
+    // Hidden is allowed so the close button can exit normally.
+    function ensureMaximized() {
+        if (visibility === Window.Windowed || visibility === Window.FullScreen || visibility === Window.Minimized)
+            showMaximized()
+    }
+    onVisibilityChanged: Qt.callLater(mainWindow.ensureMaximized)
+
+    header: WindowTitleBar {
+        applicationWindow: mainWindow
+        theme: theme
+    }
 
     QtObject {
         id: theme
