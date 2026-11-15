@@ -91,7 +91,7 @@ ApplicationWindow {
                     ColumnLayout {
                         spacing: 4
                         Text {
-                            text: "FEATURELAB  /  RESEARCH CONSOLE"
+                            text: "FEATURELAB  /  RESEARCH PROJECT - 2026"
                             color: theme.green
                             font.family: "Bahnschrift"
                             font.pixelSize: 10

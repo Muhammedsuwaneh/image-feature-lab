@@ -25,6 +25,7 @@ def main() -> int:
     qml_file = Path(__file__).resolve().parent / "ui" / "Main.qml"
 
     engine.load(QUrl.fromLocalFile(str(qml_file)))
+
     if not engine.rootObjects():
         view_model.shutdown()
         return 1

@@ -130,7 +130,6 @@ ui/                             Custom window bar, shared components, five pages
 tests/                          Numerical, data, preprocessing, ML, export and GUI tests
 data/keras/                     Ignored TensorFlow/Keras download cache
 results/mnist/                  Actual MNIST records and figures
-backups/                        Optional local archives, excluded from Git
 .prompts/                       Local project prompts, excluded from Git
 ```
 

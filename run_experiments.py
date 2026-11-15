@@ -1,4 +1,6 @@
-"""Run the same fixed experiment suite used by the desktop application."""
+"""
+    Run the same fixed experiment suite used by the desktop application.
+"""
 
 import argparse
 import sys

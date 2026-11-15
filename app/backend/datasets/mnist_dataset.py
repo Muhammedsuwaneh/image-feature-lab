@@ -1,4 +1,6 @@
-"""TensorFlow/Keras MNIST with its official, disjoint train/test split."""
+"""
+    TensorFlow/Keras MNIST with its official, disjoint train/test split.
+"""
 
 from dataclasses import dataclass
 from functools import lru_cache
@@ -70,10 +72,11 @@ def dataset_from_splits(x_train, y_train, x_test, y_test) -> MNISTDataset:
 
 @lru_cache(maxsize=1)
 def load_mnist_dataset() -> MNISTDataset:
-    """Load TensorFlow's MNIST (60,000 train / 10,000 test), downloading once.
+    """
+        Load TensorFlow's MNIST (60,000 train / 10,000 test), downloading once.
 
-    Keras verifies its own download hash and reuses the archive in KERAS_HOME.
-    There is no fallback to a different dataset or to fabricated samples.
+        Keras verifies its own download hash and reuses the archive in KERAS_HOME.
+        There is no fallback to a different dataset or to fabricated samples.
     """
     from tensorflow.keras.datasets import mnist
 
