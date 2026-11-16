@@ -2,6 +2,22 @@
 
 FeatureLab is a PyQt6 and Qt Quick/QML desktop research application for **Investigating Distance Concentration in Image Feature Spaces and Its Effect on Nearest-Neighbor Classification**. **TensorFlow/Keras MNIST is the established dataset** for digit predictions, distance analysis and future development.
 
+## Application screenshots
+
+Captured from the running Windows application using the complete MNIST dataset.
+
+### Dashboard
+
+The dashboard shows 70,000 MNIST images, 784 features per image, and the measured **96.88%** full-test baseline accuracy.
+
+![FeatureLab Dashboard with MNIST dataset information and baseline accuracy](docs/screenshots/dashboard.png)
+
+### Image Analysis: digit 2
+
+Testing `test_digits/digit_2.png` produces **Predicted digit: 2**. The page shows the original image, its normalized 28 x 28 representation, and five nearest training images, all labeled **2**.
+
+![FeatureLab Image Analysis correctly predicting digit 2 and displaying five matching neighbors](docs/screenshots/image-analysis.png)
+
 ## Install and launch
 
 Validated with Python 3.13.12 on Windows. Activate the existing environment or create a new one, then install the dependencies:

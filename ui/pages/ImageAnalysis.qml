@@ -9,11 +9,14 @@ Item {
     objectName: "imageAnalysisPage"
     required property var viewModel
     required property var theme
+    readonly property url defaultImageFolder: Qt.resolvedUrl("../../test_digits/")
 
     FileDialog {
         id: imagePicker
+        objectName: "imagePicker"
         title: "Select an image"
         fileMode: FileDialog.OpenFile
+        currentFolder: page.defaultImageFolder
         nameFilters: ["Image files (*.png *.jpg *.jpeg)"]
         onAccepted: page.viewModel.setSelectedImage(selectedFile.toString())
     }
@@ -70,7 +73,10 @@ Item {
                             Button {
                                 id: chooseImageButton
                                 text: "Choose image"
-                                onClicked: imagePicker.open()
+                                onClicked: {
+                                    imagePicker.currentFolder = page.defaultImageFolder
+                                    imagePicker.open()
+                                }
                                 contentItem: Text {
                                     text: chooseImageButton.text
                                     color: "#FFFFFF"

@@ -1,5 +1,4 @@
-"""
-    TensorFlow/Keras MNIST with its official, disjoint train/test split.
+"""TensorFlow/Keras MNIST with its official, disjoint train/test split.
 """
 
 from dataclasses import dataclass
