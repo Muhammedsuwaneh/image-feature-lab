@@ -146,7 +146,6 @@ ui/                             Custom window bar, shared components, five pages
 tests/                          Numerical, data, preprocessing, ML, export and GUI tests
 data/keras/                     Ignored TensorFlow/Keras download cache
 results/mnist/                  Actual MNIST records and figures
-.prompts/                       Local project prompts, excluded from Git
 ```
 
 Scikit-learn remains a dependency for `StandardScaler`, PCA and stratified subset selection; **its Digits dataset is not used anywhere in the active application or tests**. Local project prompts in `.prompts/` and `.prompt` (if present) are excluded from Git. The downloaded MNIST cache and local backup archives are also ignored; source code, tests, documentation and measured MNIST results can be committed normally.
