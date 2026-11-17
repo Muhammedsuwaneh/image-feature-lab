@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 
 from app.backend.validation import positive_integer
+from tensorflow.keras.datasets import mnist
 
 
 CACHE_DIRECTORY = Path(__file__).resolve().parents[3] / "data" / "keras"
@@ -57,6 +58,7 @@ def dataset_from_splits(x_train, y_train, x_test, y_test) -> MNISTDataset:
             raise ValueError("MNIST labels must be a matching integer vector.")
         if np.any((labels < 0) | (labels > 9)):
             raise ValueError("MNIST labels must be digits 0 through 9.")
+
     images = np.concatenate((x_train, x_test))
     labels = np.concatenate((y_train, y_test))
     features = images.reshape(-1, FEATURE_COUNT).astype(np.float32)
@@ -64,8 +66,10 @@ def dataset_from_splits(x_train, y_train, x_test, y_test) -> MNISTDataset:
     train_indices = np.arange(len(x_train))
     test_indices = np.arange(len(x_train), len(images))
     source_indices = np.arange(len(images))
+    
     for array in (images, labels, features, train_indices, test_indices, source_indices):
         array.setflags(write=False)
+    
     return MNISTDataset(images, labels, features, tuple(range(10)), train_indices, test_indices, source_indices)
 
 
@@ -77,7 +81,6 @@ def load_mnist_dataset() -> MNISTDataset:
         Keras verifies its own download hash and reuses the archive in KERAS_HOME.
         There is no fallback to a different dataset or to fabricated samples.
     """
-    from tensorflow.keras.datasets import mnist
 
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
     return dataset_from_splits(x_train, y_train, x_test, y_test)
