@@ -53,7 +53,9 @@ def test_distance_analysis_reports_minimum_and_nearest_samples():
 
 
 def test_squared_distance_theory_matches_theoretical_expectations():
-    summary = validate_squared_distance_theory(dimensions=(2, 10, 100), samples_per_dimension=4000, random_state=42)
+    summary = validate_squared_distance_theory(
+        dimensions=(2, 10, 100), samples_per_dimension=4000, random_state=42
+    )
 
     for dimension, stats in summary.items():
         mean_theory = dimension / 6.0
@@ -70,14 +72,27 @@ def test_squared_distance_theory_matches_theoretical_expectations():
 def test_squared_distance_cv_is_not_the_same_as_ordinary_cv():
     values = np.array([1.0, 2.0, 3.0, 4.0])
 
-    assert np.isclose(squared_distance_coefficient_of_variation(values), np.std(np.square(values)) / np.mean(np.square(values)))
+    assert np.isclose(
+        squared_distance_coefficient_of_variation(values),
+        np.std(np.square(values)) / np.mean(np.square(values)),
+    )
     assert not np.isclose(
         squared_distance_coefficient_of_variation(values),
         coefficient_of_variation(values),
     )
 
 
-@pytest.mark.parametrize("metric", [mean_distance, distance_variance, distance_standard_deviation, coefficient_of_variation, relative_distance_contrast, squared_distance_coefficient_of_variation])
+@pytest.mark.parametrize(
+    "metric",
+    [
+        mean_distance,
+        distance_variance,
+        distance_standard_deviation,
+        coefficient_of_variation,
+        relative_distance_contrast,
+        squared_distance_coefficient_of_variation,
+    ],
+)
 @pytest.mark.parametrize("values", [[], [np.nan], [np.inf], [-1.0, 2.0]])
 def test_distance_statistics_reject_invalid_values(metric, values):
     with pytest.raises(ValueError):
@@ -86,6 +101,7 @@ def test_distance_statistics_reject_invalid_values(metric, values):
 
 def test_small_nonzero_distances_are_not_treated_as_zero():
     values = np.array([1e-12, 3e-12])
+
     assert coefficient_of_variation(values) == pytest.approx(0.5)
     assert relative_distance_contrast(values) == pytest.approx(2.0)
     assert squared_distance_coefficient_of_variation(values) == pytest.approx(0.8)
@@ -103,11 +119,17 @@ def test_theory_rejects_invalid_dimensions(dimension):
 def test_vector_distances_reject_empty_or_nonfinite_inputs(values):
     with pytest.raises(ValueError):
         euclidean_distance(values, values)
+
     with pytest.raises(ValueError):
         squared_euclidean_distance(values, values)
 
 
 def test_query_analysis_rejects_invalid_shapes_and_nonfinite_data():
-    for query, references in [([0, 1], [[[1, 2]]]), ([0, np.nan], [[0, 1]]), ([0, 1], [[np.inf, 0]]), ([0, 1], [[0]])]:
+    for query, references in [
+        ([0, 1], [[[1, 2]]]),
+        ([0, np.nan], [[0, 1]]),
+        ([0, 1], [[np.inf, 0]]),
+        ([0, 1], [[0]]),
+    ]:
         with pytest.raises(ValueError):
             analyze_distance_to_samples(query, references)

@@ -42,25 +42,27 @@ Item {
                     Layout.preferredHeight: 112
                     theme: page.theme
                     label: "DATASET"
-                        value: page.viewModel.datasetLoading ? "Loading..."
-                            : page.viewModel.hasMNISTDataset ? "MNIST baseline"
-                            : page.viewModel.datasetError ? "Load failed" : "Not loaded"
-                        detail: page.viewModel.hasMNISTDataset
-                            ? page.viewModel.datasetSampleCount + " images / " + page.viewModel.datasetClassCount + " classes"
-                            : page.viewModel.datasetError
+                    value: page.viewModel.datasetLoading ? "Loading..."
+                        : page.viewModel.hasMNISTDataset ? "MNIST baseline"
+                        : page.viewModel.datasetError ? "Load failed" : "Not loaded"
+                    detail: page.viewModel.hasMNISTDataset
+                        ? page.viewModel.datasetSampleCount + " images / " + page.viewModel.datasetClassCount + " classes"
+                        : page.viewModel.datasetError
                     marker: page.theme.accent
                 }
+
                 MetricTile {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 112
                     theme: page.theme
                     label: "FEATURE SPACE"
-                          value: page.viewModel.hasMNISTDataset
-                              ? page.viewModel.datasetFeatureCount + " dimensions"
-                              : "Not available"
-                          detail: "28 x 28 grayscale pixels / intensities 0-1"
+                    value: page.viewModel.hasMNISTDataset
+                        ? page.viewModel.datasetFeatureCount + " dimensions"
+                        : "Not available"
+                    detail: "28 x 28 grayscale pixels / intensities 0-1"
                     marker: page.theme.green
                 }
+
                 MetricTile {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 112
@@ -93,6 +95,7 @@ Item {
                         anchors.fill: parent
                         anchors.margins: 22
                         spacing: 12
+
                         Text {
                             text: "RESEARCH QUESTION"
                             color: page.theme.green
@@ -100,6 +103,7 @@ Item {
                             font.pixelSize: 9
                             font.weight: Font.Bold
                         }
+
                         Text {
                             Layout.fillWidth: true
                             text: "When do distances stop distinguishing images?"
@@ -109,6 +113,7 @@ Item {
                             font.weight: Font.DemiBold
                             wrapMode: Text.WordWrap
                         }
+
                         Text {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
@@ -119,11 +124,13 @@ Item {
                             wrapMode: Text.WordWrap
                             verticalAlignment: Text.AlignTop
                         }
+
                         Rectangle {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 1
                             color: page.theme.line
                         }
+
                         Text {
                             text: "ESTU  /  BIL537 MATHEMATICS FOR ARTIFICIAL INTELLIGENCE"
                             color: page.theme.muted
@@ -147,6 +154,7 @@ Item {
                         anchors.fill: parent
                         anchors.margins: 22
                         spacing: 13
+
                         Text {
                             text: "WORKFLOW STATUS"
                             color: page.theme.green
@@ -154,18 +162,37 @@ Item {
                             font.pixelSize: 9
                             font.weight: Font.Bold
                         }
+
                         Repeater {
                             model: [
-                                { step: "01", name: "Load MNIST baseline", state: page.viewModel.datasetLoading ? "LOADING" : page.viewModel.hasMNISTDataset ? "READY" : "NOT LOADED" },
-                                { step: "02", name: "Extract feature vectors", state: page.viewModel.hasMNISTDataset ? "READY" : "PENDING" },
-                                { step: "03", name: "Compare distances", state: page.viewModel.experimentsRunning ? "RUNNING" : page.viewModel.dimensionalityCharts.length > 0 ? "COMPLETE" : "PENDING" },
-                                { step: "04", name: "Evaluate neighbors", state: page.viewModel.knnEvaluationRunning ? "RUNNING" : page.viewModel.hasKnnEvaluation ? "COMPLETE" : "PENDING" }
+                                {
+                                    step: "01",
+                                    name: "Load MNIST baseline",
+                                    state: page.viewModel.datasetLoading ? "LOADING" : page.viewModel.hasMNISTDataset ? "READY" : "NOT LOADED"
+                                },
+                                {
+                                    step: "02",
+                                    name: "Extract feature vectors",
+                                    state: page.viewModel.hasMNISTDataset ? "READY" : "PENDING"
+                                },
+                                {
+                                    step: "03",
+                                    name: "Compare distances",
+                                    state: page.viewModel.experimentsRunning ? "RUNNING" : page.viewModel.dimensionalityCharts.length > 0 ? "COMPLETE" : "PENDING"
+                                },
+                                {
+                                    step: "04",
+                                    name: "Evaluate neighbors",
+                                    state: page.viewModel.knnEvaluationRunning ? "RUNNING" : page.viewModel.hasKnnEvaluation ? "COMPLETE" : "PENDING"
+                                }
                             ]
+
                             delegate: RowLayout {
                                 id: workflowStep
                                 required property var modelData
                                 Layout.fillWidth: true
                                 spacing: 10
+
                                 Text {
                                     text: workflowStep.modelData.step
                                     color: page.theme.accent
@@ -173,6 +200,7 @@ Item {
                                     font.pixelSize: 10
                                     font.weight: Font.Bold
                                 }
+
                                 Text {
                                     Layout.fillWidth: true
                                     text: workflowStep.modelData.name
@@ -181,6 +209,7 @@ Item {
                                     font.pixelSize: 11
                                     elide: Text.ElideRight
                                 }
+
                                 Text {
                                     text: workflowStep.modelData.state
                                     color: page.theme.muted
@@ -190,12 +219,16 @@ Item {
                                 }
                             }
                         }
-                        Item { Layout.fillHeight: true }
+
+                        Item {
+                            Layout.fillHeight: true
+                        }
+
                         Text {
                             Layout.fillWidth: true
-                                text: page.viewModel.hasMNISTDataset
-                                    ? page.viewModel.datasetTrainCount + " training / " + page.viewModel.datasetTestCount + " test samples. " + (page.viewModel.experimentsRunning ? "Experiments running." : page.viewModel.dimensionalityCharts.length > 0 ? "Experiment results are ready." : "Ready to run experiments.")
-                                    : page.viewModel.datasetError
+                            text: page.viewModel.hasMNISTDataset
+                                ? page.viewModel.datasetTrainCount + " training / " + page.viewModel.datasetTestCount + " test samples. " + (page.viewModel.experimentsRunning ? "Experiments running." : page.viewModel.dimensionalityCharts.length > 0 ? "Experiment results are ready." : "Ready to run experiments.")
+                                : page.viewModel.datasetError
                             color: page.theme.muted
                             font.family: "Segoe UI"
                             font.pixelSize: 10

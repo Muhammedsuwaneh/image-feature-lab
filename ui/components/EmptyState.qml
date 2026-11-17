@@ -14,6 +14,7 @@ ColumnLayout {
         Layout.preferredHeight: 34
         radius: 6
         color: emptyState.theme.paleGreen
+
         Text {
             anchors.centerIn: parent
             text: emptyState.marker
@@ -23,6 +24,7 @@ ColumnLayout {
             font.weight: Font.Bold
         }
     }
+
     Text {
         Layout.fillWidth: true
         text: emptyState.title
@@ -32,6 +34,7 @@ ColumnLayout {
         font.weight: Font.DemiBold
         wrapMode: Text.WordWrap
     }
+
     Text {
         Layout.fillWidth: true
         text: emptyState.detail

@@ -15,7 +15,9 @@ ApplicationWindow {
     // Maximized windows use the desktop work area, leaving the taskbar visible.
     // Hidden is allowed so the close button can exit normally.
     function ensureMaximized() {
-        if (visibility === Window.Windowed || visibility === Window.FullScreen || visibility === Window.Minimized)
+        if (visibility === Window.Windowed
+            || visibility === Window.FullScreen
+            || visibility === Window.Minimized)
             showMaximized()
     }
     onVisibilityChanged: Qt.callLater(mainWindow.ensureMaximized)
@@ -49,13 +51,19 @@ ApplicationWindow {
     })
 
     function loadCurrentPage() {
-        pageLoader.setSource(pageSources[viewModel.currentPage], {"viewModel": viewModel, "theme": theme})
+        pageLoader.setSource(
+            pageSources[viewModel.currentPage],
+            {"viewModel": viewModel, "theme": theme}
+        )
     }
 
     Component.onCompleted: loadCurrentPage()
+
     Connections {
         target: mainWindow.viewModel
-        function onCurrentPageChanged() { mainWindow.loadCurrentPage() }
+        function onCurrentPageChanged() {
+            mainWindow.loadCurrentPage()
+        }
     }
 
     RowLayout {
@@ -90,6 +98,7 @@ ApplicationWindow {
 
                     ColumnLayout {
                         spacing: 4
+
                         Text {
                             text: "FEATURELAB  /  RESEARCH PROJECT - 2026"
                             color: theme.green
@@ -97,6 +106,7 @@ ApplicationWindow {
                             font.pixelSize: 10
                             font.weight: Font.Bold
                         }
+
                         Text {
                             text: mainWindow.viewModel.currentPageTitle
                             color: theme.ink
@@ -106,7 +116,9 @@ ApplicationWindow {
                         }
                     }
 
-                    Item { Layout.fillWidth: true }
+                    Item {
+                        Layout.fillWidth: true
+                    }
 
                     Rectangle {
                         Layout.preferredWidth: 218
@@ -118,18 +130,20 @@ ApplicationWindow {
                         RowLayout {
                             anchors.centerIn: parent
                             spacing: 8
+
                             Rectangle {
                                 Layout.preferredWidth: 7
                                 Layout.preferredHeight: 7
                                 radius: 3.5
                                 color: theme.accent
                             }
+
                             Text {
-                                  text: mainWindow.viewModel.datasetLoading
-                                      ? "LOADING MNIST DATASET..."
-                                      : mainWindow.viewModel.hasMNISTDataset
-                                      ? "MNIST BASELINE / " + mainWindow.viewModel.datasetSampleCount + " SAMPLES"
-                                      : "MNIST DATASET UNAVAILABLE"
+                                text: mainWindow.viewModel.datasetLoading
+                                    ? "LOADING MNIST DATASET..."
+                                    : mainWindow.viewModel.hasMNISTDataset
+                                    ? "MNIST BASELINE / " + mainWindow.viewModel.datasetSampleCount + " SAMPLES"
+                                    : "MNIST DATASET UNAVAILABLE"
                                 color: theme.muted
                                 font.family: "Bahnschrift"
                                 font.pixelSize: 9
@@ -145,6 +159,7 @@ ApplicationWindow {
                 Layout.preferredHeight: datasetStateRow.implicitHeight + 20
                 visible: !mainWindow.viewModel.hasMNISTDataset || mainWindow.viewModel.knnEvaluationError.length > 0
                 color: theme.accentSoft
+
                 RowLayout {
                     id: datasetStateRow
                     anchors.left: parent.left
@@ -152,6 +167,7 @@ ApplicationWindow {
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.margins: 20
                     spacing: 12
+
                     Text {
                         objectName: "datasetStatusText"
                         Layout.fillWidth: true
@@ -163,6 +179,7 @@ ApplicationWindow {
                         font.pixelSize: 12
                         wrapMode: Text.WordWrap
                     }
+
                     Button {
                         objectName: "loadDatasetButton"
                         visible: !mainWindow.viewModel.hasMNISTDataset
@@ -171,6 +188,7 @@ ApplicationWindow {
                         enabled: !mainWindow.viewModel.datasetLoading
                         onClicked: mainWindow.viewModel.initializeDataset()
                     }
+
                     Button {
                         visible: mainWindow.viewModel.hasMNISTDataset && mainWindow.viewModel.knnEvaluationError.length > 0
                         text: "Retry baseline evaluation"

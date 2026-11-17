@@ -46,6 +46,7 @@ Item {
                         anchors.fill: parent
                         anchors.margins: 22
                         spacing: 16
+
                         Text {
                             text: "EXPERIMENT DESIGN"
                             color: page.theme.green
@@ -53,6 +54,7 @@ Item {
                             font.pixelSize: 9
                             font.weight: Font.Bold
                         }
+
                         Text {
                             Layout.fillWidth: true
                             text: "Comparison parameters"
@@ -68,22 +70,47 @@ Item {
                             columnSpacing: 18
                             rowSpacing: 14
 
-                            Text { text: "Feature dimensions (fixed)"; color: page.theme.ink; font.family: "Segoe UI"; font.pixelSize: 11 }
+                            Text {
+                                text: "Feature dimensions (fixed)"
+                                color: page.theme.ink
+                                font.family: "Segoe UI"
+                                font.pixelSize: 11
+                            }
+
                             TextField {
                                 Layout.fillWidth: true
                                 text: "784, 1024, 1568, 2352"
                                 color: "#000000"
                                 readOnly: true
                                 selectByMouse: true
-                                background: Rectangle { radius: 4; color: "#F8F9F6"; border.color: page.theme.line }
+
+                                background: Rectangle {
+                                    radius: 4
+                                    color: "#F8F9F6"
+                                    border.color: page.theme.line
+                                }
                             }
-                            Text { text: "Distance metric"; color: page.theme.ink; font.family: "Segoe UI"; font.pixelSize: 11 }
+
+                            Text {
+                                text: "Distance metric"
+                                color: page.theme.ink
+                                font.family: "Segoe UI"
+                                font.pixelSize: 11
+                            }
+
                             ComboBox {
                                 Layout.fillWidth: true
                                 model: ["Euclidean (fixed)"]
                                 enabled: false
                             }
-                            Text { text: "Classifier"; color: page.theme.ink; font.family: "Segoe UI"; font.pixelSize: 11 }
+
+                            Text {
+                                text: "Classifier"
+                                color: page.theme.ink
+                                font.family: "Segoe UI"
+                                font.pixelSize: 11
+                            }
+
                             ComboBox {
                                 Layout.fillWidth: true
                                 model: ["k-NN, k = 5 (fixed)"]
@@ -91,16 +118,23 @@ Item {
                             }
                         }
 
-                        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: page.theme.line }
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 1
+                            color: page.theme.line
+                        }
+
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 8
+
                             Rectangle {
                                 Layout.preferredWidth: 7
                                 Layout.preferredHeight: 7
                                 radius: 3.5
                                 color: page.theme.accent
                             }
+
                             Text {
                                 Layout.fillWidth: true
                                 text: "Run experiment uses these fixed conditions; changing parameters is not available yet."
@@ -110,6 +144,7 @@ Item {
                                 wrapMode: Text.WordWrap
                             }
                         }
+
                         Button {
                             id: runExperimentButton
                             objectName: "runExperimentsButton"
@@ -119,6 +154,7 @@ Item {
                                 : page.viewModel.hasMNISTDataset ? "Run experiment" : "Load dataset and run"
                             enabled: !page.viewModel.datasetLoading && !page.viewModel.experimentsRunning
                             onClicked: page.viewModel.runDimensionalityExperiments()
+
                             contentItem: Text {
                                 text: runExperimentButton.text
                                 color: "#FFFFFF"
@@ -128,7 +164,11 @@ Item {
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
                             }
-                            background: Rectangle { radius: 4; color: runExperimentButton.enabled ? page.theme.accent : "#A8B3AC" }
+
+                            background: Rectangle {
+                                radius: 4
+                                color: runExperimentButton.enabled ? page.theme.accent : "#A8B3AC"
+                            }
                         }
                     }
                 }
@@ -139,10 +179,12 @@ Item {
                     radius: 6
                     color: "#E9EEE8"
                     border.color: "#D8E0D7"
+
                     ColumnLayout {
                         anchors.fill: parent
                         anchors.margins: 20
                         spacing: 12
+
                         Text {
                             text: "COMPARISON PRINCIPLE"
                             color: page.theme.green
@@ -150,6 +192,7 @@ Item {
                             font.pixelSize: 9
                             font.weight: Font.Bold
                         }
+
                         Text {
                             Layout.fillWidth: true
                             text: "Change one factor at a time"
@@ -159,6 +202,7 @@ Item {
                             font.weight: Font.DemiBold
                             wrapMode: Text.WordWrap
                         }
+
                         Text {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
@@ -179,10 +223,12 @@ Item {
                 radius: 6
                 color: page.theme.surface
                 border.color: page.theme.line
+
                 ColumnLayout {
                     anchors.fill: parent
                     anchors.margins: 20
                     spacing: 12
+
                     Text {
                         text: "EXPERIMENT SUMMARY"
                         color: page.theme.green
@@ -190,7 +236,13 @@ Item {
                         font.pixelSize: 9
                         font.weight: Font.Bold
                     }
-                    Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: page.theme.line }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 1
+                        color: page.theme.line
+                    }
+
                     TextArea {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
@@ -202,7 +254,12 @@ Item {
                         font.pixelSize: 10
                         wrapMode: TextEdit.WordWrap
                         readOnly: true
-                        background: Rectangle { color: "#F7F9F7"; border.color: page.theme.line; radius: 5 }
+
+                        background: Rectangle {
+                            color: "#F7F9F7"
+                            border.color: page.theme.line
+                            radius: 5
+                        }
                     }
                 }
             }

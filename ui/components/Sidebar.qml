@@ -33,14 +33,30 @@ Rectangle {
                 Column {
                     anchors.centerIn: parent
                     spacing: 3
-                    Rectangle { width: 17; height: 2; color: "#E2A08B" }
-                    Rectangle { width: 12; height: 2; color: "#C3D3C8" }
-                    Rectangle { width: 7; height: 2; color: "#C3D3C8" }
+
+                    Rectangle {
+                        width: 17
+                        height: 2
+                        color: "#E2A08B"
+                    }
+
+                    Rectangle {
+                        width: 12
+                        height: 2
+                        color: "#C3D3C8"
+                    }
+
+                    Rectangle {
+                        width: 7
+                        height: 2
+                        color: "#C3D3C8"
+                    }
                 }
             }
 
             ColumnLayout {
                 spacing: 2
+
                 Text {
                     text: "FEATURELAB"
                     color: "#F2F4F0"
@@ -48,6 +64,7 @@ Rectangle {
                     font.pixelSize: 16
                     font.weight: Font.Bold
                 }
+
                 Text {
                     text: "IMAGE FEATURE RESEARCH"
                     color: sidebar.theme.railMuted
@@ -70,11 +87,35 @@ Rectangle {
 
         Repeater {
             model: ListModel {
-                ListElement { pageId: "Dashboard"; label: "Dashboard"; indexLabel: "01" }
-                ListElement { pageId: "ImageAnalysis"; label: "Image Analysis"; indexLabel: "02" }
-                ListElement { pageId: "DistanceConcentration"; label: "Distance Concentration"; indexLabel: "03" }
-                ListElement { pageId: "DimensionalityExperiments"; label: "Dimensionality Experiments"; indexLabel: "04" }
-                ListElement { pageId: "Results"; label: "Results"; indexLabel: "05" }
+                ListElement {
+                    pageId: "Dashboard"
+                    label: "Dashboard"
+                    indexLabel: "01"
+                }
+
+                ListElement {
+                    pageId: "ImageAnalysis"
+                    label: "Image Analysis"
+                    indexLabel: "02"
+                }
+
+                ListElement {
+                    pageId: "DistanceConcentration"
+                    label: "Distance Concentration"
+                    indexLabel: "03"
+                }
+
+                ListElement {
+                    pageId: "DimensionalityExperiments"
+                    label: "Dimensionality Experiments"
+                    indexLabel: "04"
+                }
+
+                ListElement {
+                    pageId: "Results"
+                    label: "Results"
+                    indexLabel: "05"
+                }
             }
 
             delegate: Button {
@@ -90,8 +131,8 @@ Rectangle {
                 background: Rectangle {
                     radius: 5
                     color: sidebar.viewModel.currentPage === navigationButton.pageId
-                           ? "#2A433A"
-                           : navigationButton.hovered ? "#20372F" : "transparent"
+                        ? "#2A433A"
+                        : navigationButton.hovered ? "#20372F" : "transparent"
 
                     Rectangle {
                         visible: sidebar.viewModel.currentPage === navigationButton.pageId
@@ -106,31 +147,35 @@ Rectangle {
 
                 contentItem: RowLayout {
                     spacing: 11
+
                     Text {
                         Layout.leftMargin: 10
                         text: navigationButton.indexLabel
                         color: sidebar.viewModel.currentPage === navigationButton.pageId
-                               ? "#E5A28D" : "#81958B"
+                            ? "#E5A28D" : "#81958B"
                         font.family: "Bahnschrift"
                         font.pixelSize: 10
                         font.weight: Font.Bold
                     }
+
                     Text {
                         Layout.fillWidth: true
                         text: navigationButton.label
                         color: sidebar.viewModel.currentPage === navigationButton.pageId
-                               ? "#F2F4F0" : sidebar.theme.railMuted
+                            ? "#F2F4F0" : sidebar.theme.railMuted
                         font.family: "Bahnschrift"
                         font.pixelSize: 12
                         font.weight: sidebar.viewModel.currentPage === navigationButton.pageId
-                                     ? Font.DemiBold : Font.Normal
+                            ? Font.DemiBold : Font.Normal
                         elide: Text.ElideRight
                     }
                 }
             }
         }
 
-        Item { Layout.fillHeight: true }
+        Item {
+            Layout.fillHeight: true
+        }
 
         Rectangle {
             Layout.fillWidth: true
@@ -146,6 +191,7 @@ Rectangle {
             font.pixelSize: 10
             font.weight: Font.Bold
         }
+
         Text {
             Layout.topMargin: 4
             text: "Distance concentration"

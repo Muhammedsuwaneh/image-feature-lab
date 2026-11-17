@@ -16,6 +16,7 @@ ColumnLayout {
         font.pixelSize: 9
         font.weight: Font.Bold
     }
+
     Text {
         Layout.fillWidth: true
         text: pageHeader.title
@@ -25,6 +26,7 @@ ColumnLayout {
         font.weight: Font.DemiBold
         wrapMode: Text.WordWrap
     }
+
     Text {
         Layout.fillWidth: true
         text: pageHeader.description

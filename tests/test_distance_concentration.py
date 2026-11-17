@@ -5,7 +5,9 @@ from app.backend.datasets.mnist_dataset import load_mnist_dataset
 from app.viewmodels.feature_lab_view_model import FeatureLabViewModel
 
 
-def test_distance_concentration_uses_held_out_query_and_training_references(wait_until, small_mnist):
+def test_distance_concentration_uses_held_out_query_and_training_references(
+    wait_until, small_mnist
+):
     view_model = FeatureLabViewModel()
     view_model._on_dataset_loaded(small_mnist, 0.0, "")
 
@@ -14,6 +16,7 @@ def test_distance_concentration_uses_held_out_query_and_training_references(wait
     view_model.shutdown()
 
     result = view_model.distanceConcentrationResult
+
     assert result["reference_count"] == view_model.datasetTrainCount
     assert result["query_index"] not in view_model._mnist_dataset.train_indices
     assert result["nearest_sample_label"] in view_model.datasetClasses

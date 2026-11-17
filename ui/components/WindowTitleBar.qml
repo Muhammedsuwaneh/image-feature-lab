@@ -24,7 +24,9 @@ Rectangle {
             font.weight: Font.DemiBold
         }
 
-        Item { Layout.fillWidth: true }
+        Item {
+            Layout.fillWidth: true
+        }
 
         ToolButton {
             id: closeButton

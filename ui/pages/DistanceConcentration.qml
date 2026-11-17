@@ -47,8 +47,10 @@ Item {
                         anchors.fill: parent
                         anchors.margins: 18
                         spacing: 10
+
                         RowLayout {
                             Layout.fillWidth: true
+
                             Text {
                                 Layout.fillWidth: true
                                 text: "HELD-OUT QUERY"
@@ -57,6 +59,7 @@ Item {
                                 font.pixelSize: 10
                                 font.weight: Font.Bold
                             }
+
                             Text {
                                 text: page.distanceResult.error ? "ANALYSIS ERROR" : (page.distanceResult.query_index !== undefined ? "MEASURED" : "READY")
                                 color: page.distanceResult.error ? page.theme.accent : page.theme.green
@@ -65,10 +68,17 @@ Item {
                                 font.weight: Font.Bold
                             }
                         }
-                        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: page.theme.line }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 1
+                            color: page.theme.line
+                        }
+
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 14
+
                             Text {
                                 Layout.fillWidth: true
                                 text: "Test split position"
@@ -76,6 +86,7 @@ Item {
                                 font.family: "Segoe UI"
                                 font.pixelSize: 11
                             }
+
                             SpinBox {
                                 id: queryPosition
                                 from: 1
@@ -84,11 +95,13 @@ Item {
                                 stepSize: 1
                                 editable: true
                             }
+
                             Button {
                                 id: analyzeButton
                                 text: page.viewModel.distanceAnalysisRunning ? "Analyzing..." : "Analyze distances"
                                 enabled: page.viewModel.hasMNISTDataset && !page.viewModel.distanceAnalysisRunning
                                 onClicked: page.viewModel.analyzeDistanceConcentration(queryPosition.value - 1)
+
                                 contentItem: Text {
                                     text: analyzeButton.text
                                     color: "#FFFFFF"
@@ -98,7 +111,11 @@ Item {
                                     horizontalAlignment: Text.AlignHCenter
                                     verticalAlignment: Text.AlignVCenter
                                 }
-                                background: Rectangle { radius: 4; color: analyzeButton.enabled ? page.theme.accent : "#A8B3AC" }
+
+                                background: Rectangle {
+                                    radius: 4
+                                    color: analyzeButton.enabled ? page.theme.accent : "#A8B3AC"
+                                }
                             }
                         }
                     }
@@ -115,6 +132,7 @@ Item {
                         anchors.fill: parent
                         anchors.margins: 20
                         spacing: 13
+
                         Text {
                             text: "ANALYSIS BASIS"
                             color: page.theme.green
@@ -122,6 +140,7 @@ Item {
                             font.pixelSize: 9
                             font.weight: Font.Bold
                         }
+
                         Text {
                             Layout.fillWidth: true
                             text: page.viewModel.hasMNISTDataset
@@ -131,6 +150,7 @@ Item {
                             font.family: "Segoe UI"
                             font.pixelSize: 11
                         }
+
                         Text {
                             Layout.fillWidth: true
                             text: page.viewModel.hasMNISTDataset
@@ -160,6 +180,7 @@ Item {
                     detail: page.distanceResult.reference_count !== undefined ? "Across " + page.distanceResult.reference_count + " training samples" : "Run analysis to measure"
                     marker: page.theme.green
                 }
+
                 MetricTile {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 118
@@ -169,6 +190,7 @@ Item {
                     detail: page.distanceResult.variance !== undefined ? "Variance " + Number(page.distanceResult.variance).toFixed(3) : "Population statistic"
                     marker: page.theme.accent
                 }
+
                 MetricTile {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 118
@@ -178,6 +200,7 @@ Item {
                     detail: "Standard deviation / mean distance"
                     marker: "#3E7890"
                 }
+
                 MetricTile {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 118
@@ -201,10 +224,12 @@ Item {
                     radius: 6
                     color: page.theme.surface
                     border.color: page.theme.line
+
                     ColumnLayout {
                         anchors.fill: parent
                         anchors.margins: 18
                         spacing: 8
+
                         Text {
                             text: "DISTANCE DISTRIBUTION"
                             color: page.theme.ink
@@ -212,6 +237,7 @@ Item {
                             font.pixelSize: 10
                             font.weight: Font.Bold
                         }
+
                         Text {
                             Layout.fillWidth: true
                             text: page.distanceResult.query_index !== undefined
@@ -222,6 +248,7 @@ Item {
                             font.pixelSize: 10
                             wrapMode: Text.WordWrap
                         }
+
                         Image {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
@@ -231,6 +258,7 @@ Item {
                             fillMode: Image.PreserveAspectFit
                             asynchronous: true
                         }
+
                         EmptyState {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
@@ -249,10 +277,12 @@ Item {
                     radius: 6
                     color: page.theme.surface
                     border.color: page.theme.line
+
                     ColumnLayout {
                         anchors.fill: parent
                         anchors.margins: 18
                         spacing: 12
+
                         Text {
                             text: "EXTREME DISTANCES"
                             color: page.theme.ink
@@ -260,7 +290,13 @@ Item {
                             font.pixelSize: 10
                             font.weight: Font.Bold
                         }
-                        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: page.theme.line }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 1
+                            color: page.theme.line
+                        }
+
                         Text {
                             text: "NEAREST TRAINING SAMPLE"
                             color: page.theme.green
@@ -268,6 +304,7 @@ Item {
                             font.pixelSize: 8
                             font.weight: Font.Bold
                         }
+
                         Text {
                             Layout.fillWidth: true
                             text: page.distanceResult.nearest_sample_index !== undefined
@@ -278,7 +315,13 @@ Item {
                             font.pixelSize: 11
                             wrapMode: Text.WordWrap
                         }
-                        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: page.theme.line }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 1
+                            color: page.theme.line
+                        }
+
                         Text {
                             text: "FARTHEST TRAINING SAMPLE"
                             color: page.theme.accent
@@ -286,6 +329,7 @@ Item {
                             font.pixelSize: 8
                             font.weight: Font.Bold
                         }
+
                         Text {
                             Layout.fillWidth: true
                             text: page.distanceResult.farthest_sample_index !== undefined
@@ -296,7 +340,11 @@ Item {
                             font.pixelSize: 11
                             wrapMode: Text.WordWrap
                         }
-                        Item { Layout.fillHeight: true }
+
+                        Item {
+                            Layout.fillHeight: true
+                        }
+
                         Text {
                             Layout.fillWidth: true
                             text: page.distanceResult.query_index !== undefined

@@ -34,6 +34,7 @@ Item {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 12
+
                 Text {
                     Layout.fillWidth: true
                     text: page.viewModel.experimentsRunning ? "Running experiments and rendering charts..."
@@ -46,6 +47,7 @@ Item {
                     font.pixelSize: 11
                     wrapMode: Text.WordWrap
                 }
+
                 Button {
                     id: runExperimentButton
                     objectName: "runExperimentsButton"
@@ -54,6 +56,7 @@ Item {
                         : page.viewModel.hasMNISTDataset ? "Run experiments" : "Load dataset and run"
                     enabled: !page.viewModel.datasetLoading && !page.viewModel.experimentsRunning
                     onClicked: page.viewModel.runDimensionalityExperiments()
+
                     contentItem: Text {
                         text: runExperimentButton.text
                         color: "#FFFFFF"
@@ -63,7 +66,11 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
-                    background: Rectangle { radius: 4; color: runExperimentButton.enabled ? page.theme.accent : "#A8B3AC" }
+
+                    background: Rectangle {
+                        radius: 4
+                        color: runExperimentButton.enabled ? page.theme.accent : "#A8B3AC"
+                    }
                 }
             }
 
@@ -73,11 +80,13 @@ Item {
                 radius: 6
                 color: page.theme.surface
                 border.color: page.theme.line
+
                 ColumnLayout {
                     anchors.fill: parent
                     anchors.margins: 20
                     spacing: 10
                     id: comparisonColumn
+
                     Text {
                         text: "EXPERIMENT RECORDS"
                         color: page.theme.ink
@@ -85,12 +94,20 @@ Item {
                         font.pixelSize: 10
                         font.weight: Font.Bold
                     }
-                    Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: page.theme.line }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 1
+                        color: page.theme.line
+                    }
+
                     RowLayout {
                         Layout.fillWidth: true
                         spacing: 10
+
                         Repeater {
                             model: ["CONDITION", "FEATURES", "MEAN DIST.", "DIST. STD", "DIST. CV", "MEAN CONTRAST", "ACCURACY"]
+
                             Text {
                                 required property var modelData
                                 Layout.fillWidth: true
@@ -104,15 +121,19 @@ Item {
                             }
                         }
                     }
+
                     Repeater {
                         model: page.viewModel.dimensionalityComparisonRows
+
                         RowLayout {
                             id: comparisonRow
                             required property var modelData
                             Layout.fillWidth: true
                             spacing: 10
+
                             Repeater {
                                 model: [comparisonRow.modelData.label, comparisonRow.modelData.feature_count, Number(comparisonRow.modelData.mean_distance).toFixed(3), Number(comparisonRow.modelData.distance_std).toFixed(3), Number(comparisonRow.modelData.coefficient_of_variation).toFixed(3), Number(comparisonRow.modelData.relative_contrast).toFixed(3), (Number(comparisonRow.modelData.test_accuracy) * 100).toFixed(2) + "%"]
+
                                 Text {
                                     required property var modelData
                                     Layout.fillWidth: true
@@ -127,6 +148,7 @@ Item {
                             }
                         }
                     }
+
                     EmptyState {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 72
@@ -148,6 +170,7 @@ Item {
 
                 Repeater {
                     model: page.viewModel.dimensionalityCharts
+
                     Rectangle {
                         id: chartDelegate
                         required property var modelData
@@ -162,6 +185,7 @@ Item {
                             anchors.fill: parent
                             anchors.margins: 16
                             spacing: 6
+
                             Text {
                                 Layout.fillWidth: true
                                 text: chartDelegate.modelData.title
@@ -170,6 +194,7 @@ Item {
                                 font.pixelSize: 14
                                 font.weight: Font.DemiBold
                             }
+
                             Text {
                                 Layout.fillWidth: true
                                 text: chartDelegate.modelData.caption
@@ -178,6 +203,7 @@ Item {
                                 font.pixelSize: 9
                                 wrapMode: Text.WordWrap
                             }
+
                             Image {
                                 objectName: "resultChartImage"
                                 Layout.fillWidth: true

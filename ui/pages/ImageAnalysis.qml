@@ -61,6 +61,7 @@ Item {
 
                         RowLayout {
                             Layout.fillWidth: true
+
                             Text {
                                 Layout.fillWidth: true
                                 text: page.viewModel.hasSelectedImage ? page.viewModel.selectedImageName : "IMAGE PREVIEW"
@@ -70,6 +71,7 @@ Item {
                                 font.weight: Font.Bold
                                 elide: Text.ElideMiddle
                             }
+
                             Button {
                                 id: chooseImageButton
                                 text: "Choose image"
@@ -77,6 +79,7 @@ Item {
                                     imagePicker.currentFolder = page.defaultImageFolder
                                     imagePicker.open()
                                 }
+
                                 contentItem: Text {
                                     text: chooseImageButton.text
                                     color: "#FFFFFF"
@@ -86,7 +89,11 @@ Item {
                                     horizontalAlignment: Text.AlignHCenter
                                     verticalAlignment: Text.AlignVCenter
                                 }
-                                background: Rectangle { radius: 4; color: chooseImageButton.hovered ? "#A94A35" : page.theme.accent }
+
+                                background: Rectangle {
+                                    radius: 4
+                                    color: chooseImageButton.hovered ? "#A94A35" : page.theme.accent
+                                }
                             }
                         }
 
@@ -99,6 +106,7 @@ Item {
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
                                 spacing: 7
+
                                 Text {
                                     text: "ORIGINAL"
                                     color: page.theme.muted
@@ -106,12 +114,14 @@ Item {
                                     font.pixelSize: 8
                                     font.weight: Font.Bold
                                 }
+
                                 Rectangle {
                                     Layout.fillWidth: true
                                     Layout.fillHeight: true
                                     color: "#F0F3EF"
                                     radius: 4
                                     clip: true
+
                                     Image {
                                         id: originalImagePreview
                                         objectName: "originalImagePreview"
@@ -122,6 +132,7 @@ Item {
                                         asynchronous: true
                                         visible: page.viewModel.hasSelectedImage && status === Image.Ready
                                     }
+
                                     Text {
                                         anchors.centerIn: parent
                                         width: parent.width - 24
@@ -140,6 +151,7 @@ Item {
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
                                 spacing: 7
+
                                 Text {
                                     text: "28 x 28 / NORMALIZED TO 0-1"
                                     color: page.theme.muted
@@ -147,12 +159,14 @@ Item {
                                     font.pixelSize: 8
                                     font.weight: Font.Bold
                                 }
+
                                 Rectangle {
                                     Layout.fillWidth: true
                                     Layout.fillHeight: true
                                     color: "#F0F3EF"
                                     radius: 4
                                     clip: true
+
                                     Image {
                                         id: processedImagePreview
                                         objectName: "processedImagePreview"
@@ -163,6 +177,7 @@ Item {
                                         smooth: false
                                         visible: page.viewModel.hasProcessedImage && status === Image.Ready
                                     }
+
                                     Text {
                                         anchors.centerIn: parent
                                         width: parent.width - 24
@@ -202,9 +217,9 @@ Item {
 
                         Text {
                             Layout.fillWidth: true
-                                text: page.viewModel.processingError
-                                    ? "Image could not be processed"
-                                    : page.viewModel.hasProcessedImage ? "Image processed" : "Waiting for input"
+                            text: page.viewModel.processingError
+                                ? "Image could not be processed"
+                                : page.viewModel.hasProcessedImage ? "Image processed" : "Waiting for input"
                             color: page.theme.ink
                             font.family: "Bahnschrift"
                             font.pixelSize: 18
@@ -212,12 +227,24 @@ Item {
                             wrapMode: Text.WordWrap
                         }
 
-                        Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: page.theme.line }
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 1
+                            color: page.theme.line
+                        }
 
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 5
-                            Text { text: "FILE NAME"; color: page.theme.muted; font.family: "Bahnschrift"; font.pixelSize: 8; font.weight: Font.Bold }
+
+                            Text {
+                                text: "FILE NAME"
+                                color: page.theme.muted
+                                font.family: "Bahnschrift"
+                                font.pixelSize: 8
+                                font.weight: Font.Bold
+                            }
+
                             Text {
                                 Layout.fillWidth: true
                                 text: page.viewModel.hasSelectedImage ? page.viewModel.selectedImageName : "Not available"
@@ -231,11 +258,19 @@ Item {
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 5
-                            Text { text: "IMAGE DIMENSIONS"; color: page.theme.muted; font.family: "Bahnschrift"; font.pixelSize: 8; font.weight: Font.Bold }
+
                             Text {
-                                  text: page.viewModel.hasProcessedImage
-                                      ? page.viewModel.originalImageWidth + " x " + page.viewModel.originalImageHeight + " px"
-                                      : "Not available"
+                                text: "IMAGE DIMENSIONS"
+                                color: page.theme.muted
+                                font.family: "Bahnschrift"
+                                font.pixelSize: 8
+                                font.weight: Font.Bold
+                            }
+
+                            Text {
+                                text: page.viewModel.hasProcessedImage
+                                    ? page.viewModel.originalImageWidth + " x " + page.viewModel.originalImageHeight + " px"
+                                    : "Not available"
                                 color: page.theme.ink
                                 font.family: "Segoe UI"
                                 font.pixelSize: 11
@@ -252,15 +287,17 @@ Item {
                             Layout.fillWidth: true
                             theme: page.theme
                             marker: "FX"
-                                title: page.viewModel.hasProcessedImage
-                                   ? page.viewModel.featureVectorLength + "-dimensional feature vector"
-                                   : "No feature vector"
-                                detail: page.viewModel.hasProcessedImage
-                                    ? page.viewModel.preprocessingSummary
-                                    : "A vector is produced after a supported image is selected."
+                            title: page.viewModel.hasProcessedImage
+                                ? page.viewModel.featureVectorLength + "-dimensional feature vector"
+                                : "No feature vector"
+                            detail: page.viewModel.hasProcessedImage
+                                ? page.viewModel.preprocessingSummary
+                                : "A vector is produced after a supported image is selected."
                         }
 
-                        Item { Layout.fillHeight: true }
+                        Item {
+                            Layout.fillHeight: true
+                        }
 
                         Button {
                             id: clearImageButton
@@ -268,6 +305,7 @@ Item {
                             visible: page.viewModel.hasSelectedImage
                             text: "Clear image"
                             onClicked: page.viewModel.clearSelectedImage()
+
                             contentItem: Text {
                                 text: clearImageButton.text
                                 color: page.theme.ink
@@ -277,7 +315,12 @@ Item {
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
                             }
-                            background: Rectangle { radius: 4; color: "#F1F3EE"; border.color: page.theme.line }
+
+                            background: Rectangle {
+                                radius: 4
+                                color: "#F1F3EE"
+                                border.color: page.theme.line
+                            }
                         }
                     }
                 }
@@ -295,6 +338,7 @@ Item {
                     anchors.fill: parent
                     anchors.margins: 20
                     spacing: 12
+
                     Text {
                         Layout.fillWidth: true
                         text: "EXPERIMENTAL k-NN / k = " + page.viewModel.knnK
@@ -303,6 +347,7 @@ Item {
                         font.pixelSize: 11
                         font.weight: Font.Bold
                     }
+
                     Text {
                         objectName: "predictionText"
                         Layout.fillWidth: true
@@ -315,6 +360,7 @@ Item {
                         font.pixelSize: 17
                         wrapMode: Text.WordWrap
                     }
+
                     Text {
                         Layout.fillWidth: true
                         text: page.viewModel.knnEvaluationRunning ? "Evaluating the held-out baseline... You can already classify images and run experiments."
@@ -326,15 +372,19 @@ Item {
                         font.pixelSize: 11
                         wrapMode: Text.WordWrap
                     }
+
                     RowLayout {
                         Layout.fillWidth: true
                         spacing: 16
+
                         Repeater {
                             model: page.viewModel.knnNeighbors
+
                             ColumnLayout {
                                 id: neighbor
                                 required property var modelData
                                 Layout.fillWidth: true
+
                                 Image {
                                     objectName: "neighborImagePreview"
                                     Layout.fillWidth: true
@@ -343,6 +393,7 @@ Item {
                                     fillMode: Image.PreserveAspectFit
                                     smooth: false
                                 }
+
                                 Text {
                                     Layout.fillWidth: true
                                     text: "Digit " + neighbor.modelData.label + " | sample " + neighbor.modelData.index
@@ -350,6 +401,7 @@ Item {
                                     font.pixelSize: 11
                                     horizontalAlignment: Text.AlignHCenter
                                 }
+
                                 Text {
                                     Layout.fillWidth: true
                                     text: "Distance " + Number(neighbor.modelData.distance).toFixed(3)
@@ -360,6 +412,7 @@ Item {
                             }
                         }
                     }
+
                     TextArea {
                         Layout.fillWidth: true
                         visible: page.viewModel.hasProcessedImage

@@ -20,12 +20,14 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
+
             Rectangle {
                 Layout.preferredWidth: 3
                 Layout.preferredHeight: 13
                 radius: 2
                 color: metricTile.marker
             }
+
             Text {
                 Layout.fillWidth: true
                 text: metricTile.label
@@ -46,6 +48,7 @@ Rectangle {
             font.weight: Font.DemiBold
             elide: Text.ElideRight
         }
+
         Text {
             Layout.fillWidth: true
             text: metricTile.detail

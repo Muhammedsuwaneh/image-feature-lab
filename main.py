@@ -28,6 +28,7 @@ def main() -> int:
 
     if not engine.rootObjects():
         view_model.shutdown()
+
         return 1
 
     return app.exec()

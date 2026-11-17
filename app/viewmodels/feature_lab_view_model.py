@@ -33,6 +33,7 @@ class FeatureLabViewModel(QObject):
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._current_page = "Dashboard"
+
         self._selected_image_path = ""
         self._processed_image_url = ""
         self._feature_vector: list[float] = []
@@ -40,17 +41,20 @@ class FeatureLabViewModel(QObject):
         self._preprocessing_summary = ""
         self._original_image_width = 0
         self._original_image_height = 0
+
         self._knn_k = 5
         self._knn_test_accuracy = 0.0
         self._knn_evaluation_running = False
         self._knn_evaluation_ready = False
         self._knn_evaluation_error = ""
         self._baseline_task = None
+
         self._knn_prediction = -1
         self._knn_neighbor_labels: list[int] = []
         self._knn_neighbor_distances: list[float] = []
         self._knn_prediction_error = ""
         self._knn_neighbors: list[dict] = []
+
         self._experiments_running = False
         self._experiment_error = ""
         self._distance_running = False
@@ -58,12 +62,15 @@ class FeatureLabViewModel(QObject):
         self._experiment_requested = False
         self._distance_task = None
         self._closing = False
+
         self._dimensionality_summary = "No dimensionality experiment has been run yet."
         self._dimensionality_results: dict[str, object] = {}
         self._dimensionality_charts: list[dict[str, str]] = []
         self._dimensionality_comparison_rows: list[dict[str, object]] = []
+
         self._distance_concentration_result: dict[str, object] = {}
         self._distance_concentration_chart = ""
+
         self._mnist_dataset: MNISTDataset | None = None
         self._dataset_error = ""
         self._dataset_loading = False
@@ -72,13 +79,17 @@ class FeatureLabViewModel(QObject):
     def initializeDataset(self) -> None:
         if self._closing or self._dataset_loading or self._mnist_dataset is not None:
             return
+
         self._dataset_loading = True
         self._dataset_error = ""
         self.datasetChanged.emit()
+
         try:
             dataset = load_mnist_dataset()
         except Exception as error:
-            logging.getLogger(__name__).exception("Could not load tf.keras.datasets.mnist.load_data")
+            logging.getLogger(__name__).exception(
+                "Could not load tf.keras.datasets.mnist.load_data"
+            )
             self._on_dataset_failed(str(error) or type(error).__name__)
         else:
             self._on_dataset_available(dataset)
@@ -87,9 +98,11 @@ class FeatureLabViewModel(QObject):
     def _on_dataset_available(self, dataset: MNISTDataset) -> None:
         if self._closing:
             return
+
         # Publish the data first. Baseline evaluation must not gate experiments.
         self._on_dataset_loaded(dataset, None, "")
         self.evaluateKnnClassifier()
+
         if self._experiment_requested:
             self._experiment_requested = False
             self.runDimensionalityExperiments()
@@ -98,7 +111,9 @@ class FeatureLabViewModel(QObject):
     def _on_dataset_failed(self, error: str) -> None:
         if self._closing:
             return
+
         self._on_dataset_loaded(None, None, error)
+
         if self._experiment_requested:
             self._experiment_requested = False
             self._experiment_error = "Could not load the MNIST dataset: " + error
@@ -108,6 +123,7 @@ class FeatureLabViewModel(QObject):
     def _on_baseline_evaluated(self, result: dict) -> None:
         if self._closing:
             return
+
         self._knn_test_accuracy = float(result["test_accuracy"])
         self._knn_evaluation_running = False
         self._knn_evaluation_ready = True
@@ -118,20 +134,25 @@ class FeatureLabViewModel(QObject):
     def _on_baseline_failed(self, error: str) -> None:
         if self._closing:
             return
+
         self._knn_evaluation_running = False
         self._knn_evaluation_ready = False
         self._knn_evaluation_error = error
         self.datasetChanged.emit()
 
-    def _on_dataset_loaded(self, dataset: MNISTDataset | None, accuracy: float | None, error: str) -> None:
+    def _on_dataset_loaded(
+        self, dataset: MNISTDataset | None, accuracy: float | None, error: str
+    ) -> None:
         if self._closing:
             return
+
         self._mnist_dataset = dataset
         self._knn_test_accuracy = float(accuracy) if accuracy is not None else 0.0
         self._knn_evaluation_ready = dataset is not None and accuracy is not None
         self._dataset_error = error
         self._dataset_loading = False
         self.datasetChanged.emit()
+
         if self._feature_vector and dataset is not None:
             self._predict_selected_image()
             self.selectedImageChanged.emit()
@@ -140,9 +161,11 @@ class FeatureLabViewModel(QObject):
     def shutdown(self) -> None:
         # A running QThread must finish before its parent QObject is destroyed.
         self._closing = True
+
         for task in (self._baseline_task, self._experiment_task, self._distance_task):
             if task is not None:
                 task.requestInterruption()
+
         for task in (self._baseline_task, self._experiment_task, self._distance_task):
             if task is not None:
                 task.wait()
@@ -195,6 +218,7 @@ class FeatureLabViewModel(QObject):
     def selectedImageUrl(self) -> str:
         if not self._selected_image_path:
             return ""
+
         return QUrl.fromLocalFile(self._selected_image_path).toString()
 
     @pyqtProperty(str, notify=selectedImageChanged)
@@ -327,16 +351,27 @@ class FeatureLabViewModel(QObject):
     def evaluateKnnClassifier(self) -> None:
         if self._closing or self._mnist_dataset is None or self._knn_evaluation_running:
             return
+
         if self._baseline_task is not None:
             if self._baseline_task.isRunning():
                 return
+
             self._baseline_task.deleteLater()
+
         self._knn_evaluation_running = True
         self._knn_evaluation_ready = False
         self._knn_evaluation_error = ""
         self.datasetChanged.emit()
         dataset = self._mnist_dataset
-        task = BackgroundTask(lambda: evaluate_knn_classifier(dataset, k=self._knn_k, cancel_requested=task.isInterruptionRequested, accuracy_only=True), self)
+        task = BackgroundTask(
+            lambda: evaluate_knn_classifier(
+                dataset,
+                k=self._knn_k,
+                cancel_requested=task.isInterruptionRequested,
+                accuracy_only=True,
+            ),
+            self,
+        )
         self._baseline_task = task
         self._baseline_task.succeeded.connect(self._on_baseline_evaluated)
         self._baseline_task.failed.connect(self._on_baseline_failed)
@@ -344,21 +379,33 @@ class FeatureLabViewModel(QObject):
 
     @pyqtSlot()
     def runDimensionalityExperiments(self) -> None:
-        if self._closing or self._experiments_running or (self._experiment_task and self._experiment_task.isRunning()):
+        if (
+            self._closing
+            or self._experiments_running
+            or (self._experiment_task and self._experiment_task.isRunning())
+        ):
             return
+
         if self._mnist_dataset is None:
             self._experiment_requested = True
             self._experiment_error = ""
             self.dimensionalityExperimentChanged.emit()
             self.initializeDataset()
+
             return
+
         self._experiments_running = True
         self._experiment_error = ""
         self.dimensionalityExperimentChanged.emit()
+
         if self._experiment_task is not None:
             self._experiment_task.deleteLater()
+
         dataset = self._mnist_dataset
-        task = BackgroundTask(lambda: run_experiment_suite(dataset, cancel_requested=task.isInterruptionRequested), self)
+        task = BackgroundTask(
+            lambda: run_experiment_suite(dataset, cancel_requested=task.isInterruptionRequested),
+            self,
+        )
         self._experiment_task = task
         self._experiment_task.succeeded.connect(self._on_experiments_completed)
         self._experiment_task.failed.connect(self._on_experiments_failed)
@@ -368,10 +415,13 @@ class FeatureLabViewModel(QObject):
     def _on_experiments_completed(self, payload: dict) -> None:
         if self._closing:
             return
+
         self._dimensionality_results = payload["results"]
+
         self._dimensionality_summary = self._format_dimensionality_summary(payload["results"])
         self._dimensionality_charts = payload["visualizations"]["charts"]
         self._dimensionality_comparison_rows = payload["visualizations"]["comparison_rows"]
+
         self._experiments_running = False
         self.dimensionalityExperimentChanged.emit()
 
@@ -379,26 +429,41 @@ class FeatureLabViewModel(QObject):
     def _on_experiments_failed(self, error: str) -> None:
         if self._closing:
             return
+
         self._experiment_error = error
+
         self._experiments_running = False
         self.dimensionalityExperimentChanged.emit()
 
     @pyqtSlot(int)
     def analyzeDistanceConcentration(self, test_position: int) -> None:
-        if self._closing or self._distance_running or (self._distance_task and self._distance_task.isRunning()):
+        if (
+            self._closing
+            or self._distance_running
+            or (self._distance_task and self._distance_task.isRunning())
+        ):
             return
+
         if self._mnist_dataset is None:
             self._on_distance_failed("The MNIST dataset is unavailable.")
+
             return
+
         if test_position < 0 or test_position >= len(self._mnist_dataset.test_indices):
             self._on_distance_failed("Select a query from the held-out test split.")
+
             return
+
         self._distance_running = True
         self.distanceConcentrationChanged.emit()
+
         if self._distance_task is not None:
             self._distance_task.deleteLater()
+
         dataset = self._mnist_dataset
-        self._distance_task = BackgroundTask(lambda: analyze_distance_query(dataset, test_position), self)
+        self._distance_task = BackgroundTask(
+            lambda: analyze_distance_query(dataset, test_position), self
+        )
         self._distance_task.succeeded.connect(self._on_distance_completed)
         self._distance_task.failed.connect(self._on_distance_failed)
         self._distance_task.start()
@@ -407,6 +472,7 @@ class FeatureLabViewModel(QObject):
     def _on_distance_completed(self, payload: dict) -> None:
         if self._closing:
             return
+
         self._distance_concentration_result = payload["result"]
         self._distance_concentration_chart = payload["chart"]
         self._distance_running = False
@@ -416,6 +482,7 @@ class FeatureLabViewModel(QObject):
     def _on_distance_failed(self, error: str) -> None:
         if self._closing:
             return
+
         self._distance_concentration_result = {"error": error}
         self._distance_concentration_chart = ""
         self._distance_running = False
@@ -425,33 +492,42 @@ class FeatureLabViewModel(QObject):
     def _format_dimensionality_summary(results: dict[str, object]) -> str:
         sections: list[str] = []
         synthetic = results.get("synthetic", {})
+
         if synthetic:
             entries = [
                 f"d={size}: mean D^2={stats['mean_squared_distance']:.3f}, var={stats['variance_squared_distance']:.3f}, CV(D^2)={stats['squared_distance_cv']:.3f}"
                 for size, stats in sorted(synthetic.items())
             ]
             sections.append("Synthetic validation:\n" + "; ".join(entries))
+
         irrelevant = results.get("irrelevant_features", {})
+
         if irrelevant:
             entries = [
                 f"{size} features: acc={stats['test_accuracy']:.3f}, mean dist={stats['mean_distance']:.3f}, CV={stats['coefficient_of_variation']:.3f}"
                 for size, stats in sorted(irrelevant.items())
             ]
             sections.append("Irrelevant feature augmentation:\n" + "; ".join(entries))
+
         pca = results.get("standardization_and_pca", {})
+
         if pca:
             entries = [
                 f"{name}: acc={stats['test_accuracy']:.3f}, mean dist={stats['mean_distance']:.3f}, CV={stats['coefficient_of_variation']:.3f}"
                 for name, stats in pca.items()
             ]
             sections.append("Preprocessing comparison:\n" + "; ".join(entries))
-        return "\n\n".join(sections) if sections else "No dimensionality experiment output available."
+
+        return (
+            "\n\n".join(sections) if sections else "No dimensionality experiment output available."
+        )
 
     @pyqtSlot(str)
     def setSelectedImage(self, image_url: str) -> None:
         url = QUrl(image_url)
         image_path = url.toLocalFile() if url.isLocalFile() else image_url
         image_path = str(Path(image_path).expanduser().resolve()) if image_path else ""
+
         self._selected_image_path = image_path
         self._processed_image_url = ""
         self._feature_vector = []
@@ -459,11 +535,13 @@ class FeatureLabViewModel(QObject):
         self._preprocessing_summary = ""
         self._original_image_width = 0
         self._original_image_height = 0
+
         self._knn_prediction = -1
         self._knn_neighbor_labels = []
         self._knn_neighbor_distances = []
         self._knn_neighbors = []
         self._knn_prediction_error = ""
+
         if image_path:
             try:
                 processed = preprocess_image(image_path, normalize_digit=True)
@@ -472,10 +550,12 @@ class FeatureLabViewModel(QObject):
                 self._feature_vector = processed.feature_vector.tolist()
                 self._original_image_width = processed.original_width
                 self._original_image_height = processed.original_height
+
                 if self._mnist_dataset is not None:
                     self._predict_selected_image()
             except (OSError, ValueError, cv2.error) as error:
                 self._processing_error = str(error)
+
         self.selectedImageChanged.emit()
 
     @staticmethod
@@ -484,14 +564,25 @@ class FeatureLabViewModel(QObject):
 
     def _predict_selected_image(self) -> None:
         try:
-            prediction = predict_knn_for_feature_vector(self._feature_vector, self._mnist_dataset, k=self._knn_k)
+            prediction = predict_knn_for_feature_vector(
+                self._feature_vector, self._mnist_dataset, k=self._knn_k
+            )
+
             self._knn_prediction = int(prediction["predicted_label"])
             self._knn_neighbor_labels = [int(value) for value in prediction["neighbor_labels"]]
-            self._knn_neighbor_distances = [float(value) for value in prediction["neighbor_distances"]]
+            self._knn_neighbor_distances = [
+                float(value) for value in prediction["neighbor_distances"]
+            ]
             self._knn_neighbors = [
-                {"index": int(index), "label": int(self._mnist_dataset.labels[index]),
-                 "distance": float(distance), "source": digit_image_url(self._mnist_dataset.images[index])}
-                for index, distance in zip(prediction["neighbor_dataset_indices"], prediction["neighbor_distances"])
+                {
+                    "index": int(index),
+                    "label": int(self._mnist_dataset.labels[index]),
+                    "distance": float(distance),
+                    "source": digit_image_url(self._mnist_dataset.images[index]),
+                }
+                for index, distance in zip(
+                    prediction["neighbor_dataset_indices"], prediction["neighbor_distances"]
+                )
             ]
             self._knn_prediction_error = ""
         except Exception as error:
@@ -507,6 +598,7 @@ class FeatureLabViewModel(QObject):
             self._preprocessing_summary = ""
             self._original_image_width = 0
             self._original_image_height = 0
+
             self._knn_prediction = -1
             self._knn_neighbor_labels = []
             self._knn_neighbor_distances = []
